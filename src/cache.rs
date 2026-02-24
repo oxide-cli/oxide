@@ -153,3 +153,24 @@ pub fn get_installed_templates(template_path: &Path) -> Result<()> {
 
   Ok(())
 }
+
+pub fn is_template_installed(template_name: &str, template_path: &Path) -> Result<bool> {
+  let templates_json = template_path.join("oxide-templates.json");
+
+  let templates_info: TemplatesCache = if templates_json.exists() {
+    let content = fs::read_to_string(&templates_json)?;
+    serde_json::from_str(&content)?
+  } else {
+    TemplatesCache {
+      last_updated: Utc::now().to_rfc3339(),
+      templates: Vec::new(),
+    }
+  };
+
+  Ok(
+    templates_info
+      .templates
+      .iter()
+      .any(|t| t.name == template_name),
+  )
+}

@@ -27,7 +27,6 @@ pub enum Commands {
   },
 
   Install {
-    #[arg(short, long)]
     template_name: Option<String>,
 
     #[arg(short, long)]
@@ -47,7 +46,6 @@ pub enum Commands {
   },
 
   Delete {
-    #[arg(short, long)]
     template_name: String,
   },
 
