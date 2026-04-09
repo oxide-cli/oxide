@@ -1,11 +1,11 @@
 [package]
 name = "oxide-cli"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 authors = ["Maksym <maksymzhuk759@gmail.com>"]
 description = "⚡ Lightning-fast project scaffolding tool for modern JavaScript/TypeScript development"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Maksym-Zhuk/oxide"
+repository = "https://github.com/oxide-cli/oxide"
 documentation = "https://docs.rs/oxide"
 readme = "README.md"
 keywords = ["cli", "scaffold", "template", "javascript", "typescript"]

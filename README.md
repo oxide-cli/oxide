@@ -28,6 +28,26 @@ irm https://raw.githubusercontent.com/oxide-cli/oxide/main/install.ps1 | iex
 
 Unix installers place the `oxide` binary into `~/.local/bin`, so make sure that directory is in your `PATH`.
 
+### Install with npm
+
+Install the CLI globally from npm:
+
+```bash
+npm install -g @maksym-zhuk/oxide-cli
+```
+
+This package downloads the matching Oxide binary from the latest GitHub release during `postinstall`.
+
+### Install with cargo
+
+Install the crate from crates.io:
+
+```bash
+cargo install oxide-cli
+```
+
+Cargo installs the `oxide` binary into Cargo's bin directory, so make sure `~/.cargo/bin` is in your `PATH`.
+
 ### Manual install from GitHub Releases
 
 Download the latest release artifact for your platform:
