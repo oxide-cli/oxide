@@ -23,12 +23,13 @@ if (!platform) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-const version = pkg.version;
+const version = pkg.binaryVersion || pkg.version;
 
 const binDir = path.join(__dirname, 'bin');
 const dest = path.join(binDir, platform.binary);
+const versionFile = path.join(binDir, '.version');
 
-if (fs.existsSync(dest)) {
+if (fs.existsSync(dest) && fs.existsSync(versionFile) && fs.readFileSync(versionFile, 'utf8').trim() === version) {
   process.exit(0);
 }
 
@@ -129,6 +130,7 @@ download(url, (err, buf) => {
     } else {
       extractZip(buf, dest);
     }
+    fs.writeFileSync(versionFile, version);
   } catch (e) {
     console.error(`oxide-cli: extraction failed: ${e.message}`);
     process.exit(1);

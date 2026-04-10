@@ -1,15 +1,16 @@
 {
   "name": "@maksym-zhuk/oxide-cli",
   "version": "0.5.1",
+  "binaryVersion": "0.5.1",
   "description": "Lightning-fast project scaffolding tool for modern JavaScript/TypeScript development",
   "homepage": "https://github.com/oxide-cli/oxide",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oxide-cli/oxide.git"
+    "url": "git+https://github.com/oxide-cli/oxide.git"
   },
   "license": "MIT OR Apache-2.0",
   "bin": {
-    "oxide": "./wrapper.js"
+    "oxide": "wrapper.js"
   },
   "scripts": {
     "postinstall": "node install.js"
