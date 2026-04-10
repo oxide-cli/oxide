@@ -151,18 +151,21 @@ pub async fn run_addon_command(
   }
 
   // 11. Update lock
-  lock.mark_command_executed(addon_id, command_name);
   let variant_id = detected_id.unwrap_or_else(|| "universal".to_string());
+  let mut commands_executed = lock
+    .addons
+    .iter()
+    .find(|e| e.id == addon_id)
+    .map(|e| e.commands_executed.clone())
+    .unwrap_or_default();
+  if !commands_executed.iter().any(|c| c == command_name) {
+    commands_executed.push(command_name.to_string());
+  }
   lock.upsert_entry(LockEntry {
     id: addon_id.to_string(),
     version: manifest.version.clone(),
     variant: variant_id,
-    commands_executed: lock
-      .addons
-      .iter()
-      .find(|e| e.id == addon_id)
-      .map(|e| e.commands_executed.clone())
-      .unwrap_or_default(),
+    commands_executed,
   });
   lock.save(project_root)?;
 
