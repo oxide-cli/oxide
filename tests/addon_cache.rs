@@ -55,8 +55,7 @@ fn update_addons_cache_replaces_duplicate() {
   assert_eq!(result.commit_sha, "sha2");
 
   // Only one entry after replacement
-  let content =
-    std::fs::read_to_string(dir.path().join("oxide-addons.json")).unwrap();
+  let content = std::fs::read_to_string(dir.path().join("oxide-addons.json")).unwrap();
   let cache: oxide_cli::addons::cache::AddonsCache = serde_json::from_str(&content).unwrap();
   assert_eq!(cache.addons.len(), 1);
 }
@@ -67,8 +66,7 @@ fn update_addons_cache_stores_multiple_addons() {
   update_addons_cache(dir.path(), "drizzle", &make_manifest("drizzle"), "sha1").unwrap();
   update_addons_cache(dir.path(), "prisma", &make_manifest("prisma"), "sha2").unwrap();
 
-  let content =
-    std::fs::read_to_string(dir.path().join("oxide-addons.json")).unwrap();
+  let content = std::fs::read_to_string(dir.path().join("oxide-addons.json")).unwrap();
   let cache: oxide_cli::addons::cache::AddonsCache = serde_json::from_str(&content).unwrap();
   assert_eq!(cache.addons.len(), 2);
 }
@@ -106,7 +104,11 @@ fn get_cached_addon_returns_none_when_no_index() {
 #[test]
 fn remove_addon_removes_entry() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("drizzle").child("oxide.addon.json").write_str("{}").unwrap();
+  dir
+    .child("drizzle")
+    .child("oxide.addon.json")
+    .write_str("{}")
+    .unwrap();
   update_addons_cache(dir.path(), "drizzle", &make_manifest("drizzle"), "abc").unwrap();
 
   remove_addon_from_cache(dir.path(), "drizzle").unwrap();
@@ -118,7 +120,11 @@ fn remove_addon_removes_entry() {
 #[test]
 fn remove_addon_deletes_directory() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("drizzle").child("oxide.addon.json").write_str("{}").unwrap();
+  dir
+    .child("drizzle")
+    .child("oxide.addon.json")
+    .write_str("{}")
+    .unwrap();
   update_addons_cache(dir.path(), "drizzle", &make_manifest("drizzle"), "abc").unwrap();
 
   remove_addon_from_cache(dir.path(), "drizzle").unwrap();
@@ -151,7 +157,11 @@ fn remove_addon_keeps_other_addons() {
 #[test]
 fn is_addon_installed_true_when_in_cache_and_dir_exists() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("drizzle").child("oxide.addon.json").write_str("{}").unwrap();
+  dir
+    .child("drizzle")
+    .child("oxide.addon.json")
+    .write_str("{}")
+    .unwrap();
   update_addons_cache(dir.path(), "drizzle", &make_manifest("drizzle"), "abc").unwrap();
 
   assert!(is_addon_installed(dir.path(), "drizzle").unwrap());

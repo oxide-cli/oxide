@@ -7,7 +7,7 @@ use oxide_cli::addons::{
   steps::{
     Rollback, append::execute_append, copy::execute_copy, create::execute_create,
     delete::execute_delete, inject::execute_inject, move_step::execute_move,
-    rename::execute_rename, replace::execute_replace, render_lines, render_string,
+    rename::execute_rename, render_lines, render_string, replace::execute_replace,
   },
 };
 
@@ -520,8 +520,14 @@ fn copy_new_file_rollback_is_delete_created() {
 fn copy_overwrites_existing_file() {
   let addon_dir = assert_fs::TempDir::new().unwrap();
   let project_dir = assert_fs::TempDir::new().unwrap();
-  addon_dir.child("template.txt").write_str("new content").unwrap();
-  project_dir.child("output.txt").write_str("old content").unwrap();
+  addon_dir
+    .child("template.txt")
+    .write_str("new content")
+    .unwrap();
+  project_dir
+    .child("output.txt")
+    .write_str("old content")
+    .unwrap();
 
   let step = CopyStep {
     src: "template.txt".into(),
@@ -665,7 +671,9 @@ fn inject_content_uses_template_vars() {
   dir.child("app.ts").write_str("// imports\n").unwrap();
 
   let step = InjectStep {
-    target: Target::File { file: "app.ts".into() },
+    target: Target::File {
+      file: "app.ts".into(),
+    },
     content: "import {{ lib }} from '{{ lib }}';".into(),
     after: Some("// imports".into()),
     before: None,
@@ -683,10 +691,15 @@ fn inject_content_uses_template_vars() {
 #[test]
 fn replace_uses_template_var_in_replacement() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("config.ts").write_str("const PORT = 3000;").unwrap();
+  dir
+    .child("config.ts")
+    .write_str("const PORT = 3000;")
+    .unwrap();
 
   let step = ReplaceStep {
-    target: Target::File { file: "config.ts".into() },
+    target: Target::File {
+      file: "config.ts".into(),
+    },
     find: "3000".into(),
     replace: "{{ port }}".into(),
     if_not_found: IfNotFound::Error,
@@ -706,7 +719,9 @@ fn append_uses_template_var_in_content() {
   dir.child("file.txt").write_str("line1").unwrap();
 
   let step = AppendStep {
-    target: Target::File { file: "file.txt".into() },
+    target: Target::File {
+      file: "file.txt".into(),
+    },
     content: "# added by {{ author }}".into(),
   };
 
@@ -782,7 +797,9 @@ fn append_to_file_with_trailing_newline_no_double_newline() {
   dir.child("file.txt").write_str("line1\n").unwrap();
 
   let step = AppendStep {
-    target: Target::File { file: "file.txt".into() },
+    target: Target::File {
+      file: "file.txt".into(),
+    },
     content: "line2".into(),
   };
 

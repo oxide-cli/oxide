@@ -9,7 +9,11 @@ fn cmd() -> Command {
 
 #[test]
 fn help_flag() {
-  cmd().arg("--help").assert().success().stdout(contains("Usage"));
+  cmd()
+    .arg("--help")
+    .assert()
+    .success()
+    .stdout(contains("Usage"));
 }
 
 #[test]
@@ -121,11 +125,7 @@ fn new_help() {
 
 #[test]
 fn new_missing_both_args() {
-  cmd()
-    .arg("new")
-    .assert()
-    .failure()
-    .stderr(contains("NAME"));
+  cmd().arg("new").assert().failure().stderr(contains("NAME"));
 }
 
 #[test]
@@ -141,26 +141,17 @@ fn new_missing_template_arg() {
 
 #[test]
 fn login_help() {
-  cmd()
-    .args(["login", "--help"])
-    .assert()
-    .success();
+  cmd().args(["login", "--help"]).assert().success();
 }
 
 #[test]
 fn logout_help() {
-  cmd()
-    .args(["logout", "--help"])
-    .assert()
-    .success();
+  cmd().args(["logout", "--help"]).assert().success();
 }
 
 #[test]
 fn account_help() {
-  cmd()
-    .args(["account", "--help"])
-    .assert()
-    .success();
+  cmd().args(["account", "--help"]).assert().success();
 }
 
 // ── aliases ───────────────────────────────────────────────────────────────────
@@ -176,26 +167,17 @@ fn alias_t_for_template() {
 
 #[test]
 fn alias_n_for_new() {
-  cmd()
-    .args(["n", "--help"])
-    .assert()
-    .success();
+  cmd().args(["n", "--help"]).assert().success();
 }
 
 #[test]
 fn alias_in_for_login() {
-  cmd()
-    .args(["in", "--help"])
-    .assert()
-    .success();
+  cmd().args(["in", "--help"]).assert().success();
 }
 
 #[test]
 fn alias_out_for_logout() {
-  cmd()
-    .args(["out", "--help"])
-    .assert()
-    .success();
+  cmd().args(["out", "--help"]).assert().success();
 }
 
 #[test]
@@ -215,7 +197,8 @@ fn completions_help() {
     .args(["completions", "--help"])
     .assert()
     .success()
-    .stdout(contains("SHELL"));
+    .stdout(contains("SHELL"))
+    .stdout(contains("powershell"));
 }
 
 #[test]

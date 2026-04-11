@@ -51,10 +51,18 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonMani
     && addon_dir.exists()
   {
     let manifest_path = addon_dir.join("oxide.addon.json");
-    let content = std::fs::read_to_string(&manifest_path)
-      .with_context(|| format!("Failed to read cached manifest at {}", manifest_path.display()))?;
-    let manifest: AddonManifest = serde_json::from_str(&content)
-      .with_context(|| format!("Failed to parse cached manifest at {}", manifest_path.display()))?;
+    let content = std::fs::read_to_string(&manifest_path).with_context(|| {
+      format!(
+        "Failed to read cached manifest at {}",
+        manifest_path.display()
+      )
+    })?;
+    let manifest: AddonManifest = serde_json::from_str(&content).with_context(|| {
+      format!(
+        "Failed to parse cached manifest at {}",
+        manifest_path.display()
+      )
+    })?;
     println!("Addon '{}' is already up to date", addon_id);
     return Ok(manifest);
   }
@@ -100,8 +108,12 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonMani
 
 pub fn read_cached_manifest(addons_dir: &Path, addon_id: &str) -> Result<AddonManifest> {
   let manifest_path = addons_dir.join(addon_id).join("oxide.addon.json");
-  let content = std::fs::read_to_string(&manifest_path)
-    .with_context(|| format!("Failed to read manifest for addon '{addon_id}' at {}", manifest_path.display()))?;
+  let content = std::fs::read_to_string(&manifest_path).with_context(|| {
+    format!(
+      "Failed to read manifest for addon '{addon_id}' at {}",
+      manifest_path.display()
+    )
+  })?;
   serde_json::from_str(&content)
     .with_context(|| format!("Failed to parse manifest for addon '{addon_id}'"))
 }

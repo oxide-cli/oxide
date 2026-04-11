@@ -7,7 +7,11 @@ use crate::addons::manifest::{CopyStep, IfExists};
 
 use super::Rollback;
 
-pub fn execute_copy(step: &CopyStep, addon_dir: &Path, project_root: &Path) -> Result<Vec<Rollback>> {
+pub fn execute_copy(
+  step: &CopyStep,
+  addon_dir: &Path,
+  project_root: &Path,
+) -> Result<Vec<Rollback>> {
   let src = super::safe_join(addon_dir, &step.src, "addon source")?;
   let dest = super::safe_join(project_root, &step.dest, "copy destination")?;
 
@@ -23,10 +27,16 @@ pub fn execute_copy(step: &CopyStep, addon_dir: &Path, project_root: &Path) -> R
         if !overwrite {
           return Ok(rollbacks);
         }
-        rollbacks.push(Rollback::RestoreFile { path: dest.clone(), original: std::fs::read(&dest)? });
+        rollbacks.push(Rollback::RestoreFile {
+          path: dest.clone(),
+          original: std::fs::read(&dest)?,
+        });
       }
       IfExists::Overwrite => {
-        rollbacks.push(Rollback::RestoreFile { path: dest.clone(), original: std::fs::read(&dest)? });
+        rollbacks.push(Rollback::RestoreFile {
+          path: dest.clone(),
+          original: std::fs::read(&dest)?,
+        });
       }
     }
   } else {

@@ -140,9 +140,10 @@ download(url, (err, buf) => {
 });
 
 function installCompletions(binaryPath) {
-  if (process.platform === 'win32') return;
-  const shell = path.basename(process.env.SHELL || '');
-  if (!shell || !['bash', 'zsh', 'fish'].includes(shell)) return;
+  const shell = process.platform === 'win32'
+    ? 'powershell'
+    : path.basename(process.env.SHELL || '');
+  if (!shell || !['bash', 'zsh', 'fish', 'powershell'].includes(shell)) return;
   try {
     spawnSync(binaryPath, ['completions', shell], { stdio: 'inherit' });
   } catch (_) {

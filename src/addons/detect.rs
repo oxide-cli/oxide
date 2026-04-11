@@ -23,14 +23,23 @@ fn eval_rule(rule: &DetectRule, project_root: &Path) -> bool {
       if *negate { !result } else { result }
     }
 
-    DetectRule::FileContains { file, contains, negate } => {
+    DetectRule::FileContains {
+      file,
+      contains,
+      negate,
+    } => {
       let result = std::fs::read_to_string(project_root.join(file))
         .map(|s| s.contains(contains.as_str()))
         .unwrap_or(false);
       if *negate { !result } else { result }
     }
 
-    DetectRule::JsonContains { file, key_path, value, negate } => {
+    DetectRule::JsonContains {
+      file,
+      key_path,
+      value,
+      negate,
+    } => {
       let result = std::fs::read_to_string(project_root.join(file))
         .ok()
         .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
@@ -39,7 +48,12 @@ fn eval_rule(rule: &DetectRule, project_root: &Path) -> bool {
       if *negate { !result } else { result }
     }
 
-    DetectRule::TomlContains { file, key_path, value, negate } => {
+    DetectRule::TomlContains {
+      file,
+      key_path,
+      value,
+      negate,
+    } => {
       let result = std::fs::read_to_string(project_root.join(file))
         .ok()
         .and_then(|s| toml::from_str::<toml::Value>(&s).ok())
@@ -48,7 +62,12 @@ fn eval_rule(rule: &DetectRule, project_root: &Path) -> bool {
       if *negate { !result } else { result }
     }
 
-    DetectRule::YamlContains { file, key_path, value, negate } => {
+    DetectRule::YamlContains {
+      file,
+      key_path,
+      value,
+      negate,
+    } => {
       let result = std::fs::read_to_string(project_root.join(file))
         .ok()
         .and_then(|s| serde_yaml::from_str::<serde_yaml::Value>(&s).ok())
@@ -111,4 +130,3 @@ fn traverse_yaml(mut v: &serde_yaml::Value, key_path: &str, expected: Option<&st
     },
   }
 }
-

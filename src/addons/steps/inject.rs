@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use inquire::Select;
 
 use crate::addons::manifest::{IfNotFound, InjectStep};
@@ -20,8 +20,10 @@ pub fn execute_inject(
 
   for path in paths {
     let original = std::fs::read(&path)?;
-    let mut file_lines: Vec<String> =
-      String::from_utf8_lossy(&original).lines().map(str::to_string).collect();
+    let mut file_lines: Vec<String> = String::from_utf8_lossy(&original)
+      .lines()
+      .map(str::to_string)
+      .collect();
 
     let marker = step.after.as_deref().or(step.before.as_deref());
 
@@ -36,10 +38,18 @@ pub fn execute_inject(
         None => match step.if_not_found {
           IfNotFound::Skip => continue,
           IfNotFound::Error => {
-            return Err(anyhow!("Marker {:?} not found in {}", marker, path.display()));
+            return Err(anyhow!(
+              "Marker {:?} not found in {}",
+              marker,
+              path.display()
+            ));
           }
           IfNotFound::WarnAndAsk => {
-            eprintln!("Warning: marker {:?} not found in {}", marker, path.display());
+            eprintln!(
+              "Warning: marker {:?} not found in {}",
+              marker,
+              path.display()
+            );
             let choice =
               Select::new("How would you like to proceed?", vec!["Continue", "Abort"]).prompt()?;
             if choice == "Abort" {
@@ -55,7 +65,10 @@ pub fn execute_inject(
       file_lines = new_lines;
     }
 
-    rollbacks.push(Rollback::RestoreFile { path: path.clone(), original });
+    rollbacks.push(Rollback::RestoreFile {
+      path: path.clone(),
+      original,
+    });
     std::fs::write(&path, file_lines.join("\n"))?;
   }
 

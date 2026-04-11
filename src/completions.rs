@@ -1,6 +1,7 @@
 use std::{
   collections::HashSet,
   fs,
+  io::ErrorKind,
   path::{Path, PathBuf},
 };
 
@@ -15,8 +16,9 @@ pub fn install_completions(shell: &str) -> Result<()> {
     "bash" => install_bash(),
     "zsh" => install_zsh(),
     "fish" => install_fish(),
+    "powershell" => install_powershell(),
     other => {
-      eprintln!("Unsupported shell '{other}'. Supported: bash, zsh, fish");
+      eprintln!("Unsupported shell '{other}'. Supported: bash, zsh, fish, powershell");
       Ok(())
     }
   }
@@ -29,15 +31,21 @@ fn install_bash() -> Result<()> {
   fs::create_dir_all(&dir)
     .with_context(|| format!("Failed to create directory {}", dir.display()))?;
   let dest = dir.join("oxide");
-  fs::write(&dest, BASH_SCRIPT)
-    .with_context(|| format!("Failed to write {}", dest.display()))?;
+  fs::write(&dest, BASH_SCRIPT).with_context(|| format!("Failed to write {}", dest.display()))?;
 
-  println!("{} Bash completions installed to {}", "✔".green(), dest.display());
+  println!(
+    "{} Bash completions installed to {}",
+    "✔".green(),
+    dest.display()
+  );
   println!(
     "  Open a new terminal, or run: {}",
     format!("source {}", dest.display()).cyan()
   );
-  println!("  Note: requires the {} package to be installed.", "bash-completion".cyan());
+  println!(
+    "  Note: requires the {} package to be installed.",
+    "bash-completion".cyan()
+  );
   Ok(())
 }
 
@@ -56,7 +64,11 @@ fn install_zsh() -> Result<()> {
     let dest = dir.join("oxide.zsh");
     fs::write(&dest, ZSH_SOURCED_SCRIPT)
       .with_context(|| format!("Failed to write {}", dest.display()))?;
-    println!("{} Zsh completions installed to {}", "✔".green(), dest.display());
+    println!(
+      "{} Zsh completions installed to {}",
+      "✔".green(),
+      dest.display()
+    );
     println!("  Restart your terminal or open a new tab — completions are active immediately.");
   } else {
     let dir = home_zfunc_dir()?;
@@ -65,7 +77,11 @@ fn install_zsh() -> Result<()> {
     let dest = dir.join("_oxide");
     fs::write(&dest, ZSH_FPATH_SCRIPT)
       .with_context(|| format!("Failed to write {}", dest.display()))?;
-    println!("{} Zsh completions installed to {}", "✔".green(), dest.display());
+    println!(
+      "{} Zsh completions installed to {}",
+      "✔".green(),
+      dest.display()
+    );
     println!("  Ensure your ~/.zshrc contains:");
     println!("    {}", "fpath=(~/.zfunc $fpath)".cyan());
     println!("    {}", "autoload -Uz compinit && compinit".cyan());
@@ -85,8 +101,7 @@ fn zdotdir_completions_dir() -> Option<PathBuf> {
     return None;
   }
   // Confirm this is a HyDE environment before using the sourced-script path.
-  let is_hyde = zdotdir.join(".hyde.zshrc").exists()
-    || which::which("hyde-cli").is_ok();
+  let is_hyde = zdotdir.join(".hyde.zshrc").exists() || which::which("hyde-cli").is_ok();
   if is_hyde { Some(dir) } else { None }
 }
 
@@ -101,10 +116,13 @@ fn install_fish() -> Result<()> {
   fs::create_dir_all(&dir)
     .with_context(|| format!("Failed to create directory {}", dir.display()))?;
   let dest = dir.join("oxide.fish");
-  fs::write(&dest, FISH_SCRIPT)
-    .with_context(|| format!("Failed to write {}", dest.display()))?;
+  fs::write(&dest, FISH_SCRIPT).with_context(|| format!("Failed to write {}", dest.display()))?;
 
-  println!("{} Fish completions installed to {}", "✔".green(), dest.display());
+  println!(
+    "{} Fish completions installed to {}",
+    "✔".green(),
+    dest.display()
+  );
   println!("  Completions are active immediately in new fish sessions.");
   Ok(())
 }
@@ -119,6 +137,137 @@ fn fish_completions_dir() -> Result<PathBuf> {
         .join(".config")
     });
   Ok(config_dir.join("fish/completions"))
+}
+
+fn install_powershell() -> Result<()> {
+  let script_path = powershell_script_path()?;
+  write_completion_script(&script_path, POWERSHELL_SCRIPT)?;
+
+  let profiles = powershell_profile_paths()?;
+  for profile in &profiles {
+    upsert_powershell_profile(profile, &script_path)?;
+  }
+
+  println!(
+    "{} PowerShell completions installed to {}",
+    "✔".green(),
+    script_path.display()
+  );
+  for profile in &profiles {
+    println!("  Registered in {}", profile.display());
+  }
+  println!("  Open a new PowerShell session to use completions.");
+  Ok(())
+}
+
+fn write_completion_script(path: &Path, script: &str) -> Result<()> {
+  let dir = path
+    .parent()
+    .context("Completion script path is missing a parent directory")?;
+  fs::create_dir_all(dir)
+    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+  fs::write(path, script).with_context(|| format!("Failed to write {}", path.display()))?;
+  Ok(())
+}
+
+fn powershell_script_path() -> Result<PathBuf> {
+  let home = dirs::home_dir().context("Could not determine home directory")?;
+  Ok(home.join(".oxide").join("completions").join("oxide.ps1"))
+}
+
+fn powershell_profile_paths() -> Result<Vec<PathBuf>> {
+  let documents_dir = dirs::document_dir()
+    .or_else(|| dirs::home_dir().map(|home| home.join("Documents")))
+    .context("Could not determine documents directory")?;
+  Ok(powershell_profile_paths_in(&documents_dir))
+}
+
+fn powershell_profile_paths_in(documents_dir: &Path) -> Vec<PathBuf> {
+  vec![
+    documents_dir
+      .join("PowerShell")
+      .join("Microsoft.PowerShell_profile.ps1"),
+    documents_dir
+      .join("WindowsPowerShell")
+      .join("Microsoft.PowerShell_profile.ps1"),
+  ]
+}
+
+fn upsert_powershell_profile(profile_path: &Path, script_path: &Path) -> Result<()> {
+  let dir = profile_path
+    .parent()
+    .context("Profile path is missing a parent directory")?;
+  fs::create_dir_all(dir)
+    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+
+  let existing = match fs::read_to_string(profile_path) {
+    Ok(content) => content,
+    Err(err) if err.kind() == ErrorKind::NotFound => String::new(),
+    Err(err) => {
+      return Err(err).with_context(|| format!("Failed to read {}", profile_path.display()));
+    }
+  };
+
+  let updated = upsert_managed_block(
+    &existing,
+    &powershell_profile_snippet(script_path),
+    POWERSHELL_PROFILE_START_MARKER,
+    POWERSHELL_PROFILE_END_MARKER,
+  );
+
+  if updated != existing {
+    fs::write(profile_path, updated)
+      .with_context(|| format!("Failed to write {}", profile_path.display()))?;
+  }
+
+  Ok(())
+}
+
+fn powershell_profile_snippet(script_path: &Path) -> String {
+  let script_path = powershell_single_quote(script_path);
+  format!(
+    "{POWERSHELL_PROFILE_START_MARKER}\n\
+$oxideCompletionScript = '{script_path}'\n\
+if (Test-Path $oxideCompletionScript) {{\n\
+  . $oxideCompletionScript\n\
+}}\n\
+{POWERSHELL_PROFILE_END_MARKER}"
+  )
+}
+
+fn powershell_single_quote(path: &Path) -> String {
+  path.to_string_lossy().replace('\'', "''")
+}
+
+fn upsert_managed_block(
+  content: &str,
+  block: &str,
+  start_marker: &str,
+  end_marker: &str,
+) -> String {
+  let mut content = content.replace("\r\n", "\n");
+  let block = format!("{block}\n");
+
+  if let Some(start) = content.find(start_marker) {
+    if let Some(end_rel) = content[start..].find(end_marker) {
+      let end_marker_end = start + end_rel + end_marker.len();
+      let block_end = content[end_marker_end..]
+        .find('\n')
+        .map(|idx| end_marker_end + idx + 1)
+        .unwrap_or(content.len());
+      content.replace_range(start..block_end, &block);
+      return content;
+    }
+  }
+
+  if !content.is_empty() && !content.ends_with('\n') {
+    content.push('\n');
+  }
+  if !content.is_empty() {
+    content.push('\n');
+  }
+  content.push_str(&block);
+  content
 }
 
 /// Print dynamic completions to stdout — called by the generated completion scripts.
@@ -375,3 +524,185 @@ complete -c oxide \
   -n 'test (count (commandline -opc)) -eq 2; and not contains -- (commandline -opc)[2] new template addon login logout account completions' \
   -a '(oxide _complete (commandline -opc)[2] 2>/dev/null)'
 "#;
+
+const POWERSHELL_PROFILE_START_MARKER: &str = "# oxide completions start";
+const POWERSHELL_PROFILE_END_MARKER: &str = "# oxide completions end";
+
+const POWERSHELL_SCRIPT: &str = r#"# oxide shell completions for PowerShell
+
+function New-OxideCompletionResult {
+  param(
+    [string] $Value,
+    [string] $ToolTip
+  )
+
+  [System.Management.Automation.CompletionResult]::new($Value, $Value, 'ParameterValue', $ToolTip)
+}
+
+$registerOxideCompleter = @{
+  CommandName = 'oxide'
+  ScriptBlock = {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    if ($null -eq $wordToComplete) {
+      $wordToComplete = ''
+    }
+
+    $commandName = if ($commandAst.CommandElements.Count -gt 0) {
+      $commandAst.CommandElements[0].Extent.Text
+    } else {
+      'oxide'
+    }
+
+    $tokens = @($commandAst.CommandElements | Select-Object -Skip 1 | ForEach-Object {
+      $_.Extent.Text
+    })
+
+    $topLevel = @(
+      @{ Value = 'new';         ToolTip = 'Create a new project from a template (oxide n)' }
+      @{ Value = 'template';    ToolTip = 'Manage templates (oxide t)' }
+      @{ Value = 'addon';       ToolTip = 'Manage addons (oxide a)' }
+      @{ Value = 'login';       ToolTip = 'Log in to your Oxide account (oxide in)' }
+      @{ Value = 'logout';      ToolTip = 'Log out of your Oxide account (oxide out)' }
+      @{ Value = 'account';     ToolTip = 'Show account information' }
+      @{ Value = 'completions'; ToolTip = 'Install shell completions' }
+      @{ Value = 'n';           ToolTip = 'Alias for new' }
+      @{ Value = 't';           ToolTip = 'Alias for template' }
+      @{ Value = 'a';           ToolTip = 'Alias for addon' }
+      @{ Value = 'in';          ToolTip = 'Alias for login' }
+      @{ Value = 'out';         ToolTip = 'Alias for logout' }
+    )
+
+    $templateSubcommands = @(
+      @{ Value = 'install'; ToolTip = 'Download and cache a template (i)' }
+      @{ Value = 'list';    ToolTip = 'List installed templates (l)' }
+      @{ Value = 'remove';  ToolTip = 'Remove a template from cache (r)' }
+      @{ Value = 'publish'; ToolTip = 'Publish a GitHub repository as a template (p)' }
+      @{ Value = 'update';  ToolTip = 'Update a published template (u)' }
+    )
+
+    $addonSubcommands = @(
+      @{ Value = 'install'; ToolTip = 'Install and cache an addon (i)' }
+      @{ Value = 'list';    ToolTip = 'List installed addons (l)' }
+      @{ Value = 'remove';  ToolTip = 'Remove a cached addon (r)' }
+      @{ Value = 'publish'; ToolTip = 'Publish a GitHub repository as an addon (p)' }
+      @{ Value = 'update';  ToolTip = 'Update a published addon (u)' }
+    )
+
+    $completionShells = @(
+      @{ Value = 'bash';       ToolTip = 'Install bash completions' }
+      @{ Value = 'zsh';        ToolTip = 'Install zsh completions' }
+      @{ Value = 'fish';       ToolTip = 'Install fish completions' }
+      @{ Value = 'powershell'; ToolTip = 'Install PowerShell completions' }
+    )
+
+    function Complete-OxideItems {
+      param([object[]] $Items)
+
+      foreach ($item in $Items) {
+        if ($item.Value -like "$wordToComplete*") {
+          New-OxideCompletionResult -Value $item.Value -ToolTip $item.ToolTip
+        }
+      }
+    }
+
+    if ($tokens.Count -le 1) {
+      Complete-OxideItems $topLevel
+      $addonIds = & $commandName _complete 2>$null
+      foreach ($addonId in $addonIds) {
+        if ($addonId -like "$wordToComplete*") {
+          New-OxideCompletionResult -Value $addonId -ToolTip 'Installed addon'
+        }
+      }
+      return
+    }
+
+    $first = $tokens[0]
+    if ($tokens.Count -eq 2) {
+      switch ($first) {
+        'template' { Complete-OxideItems $templateSubcommands; return }
+        't' { Complete-OxideItems $templateSubcommands; return }
+        'addon' { Complete-OxideItems $addonSubcommands; return }
+        'a' { Complete-OxideItems $addonSubcommands; return }
+        'completions' { Complete-OxideItems $completionShells; return }
+        default {
+          $addonCommands = & $commandName _complete $first 2>$null
+          foreach ($addonCommand in $addonCommands) {
+            if ($addonCommand -like "$wordToComplete*") {
+              New-OxideCompletionResult -Value $addonCommand -ToolTip 'Addon command'
+            }
+          }
+          return
+        }
+      }
+    }
+  }
+}
+
+if ((Get-Command Register-ArgumentCompleter).Parameters.ContainsKey('Native')) {
+  $registerOxideCompleter.Native = $true
+}
+
+Register-ArgumentCompleter @registerOxideCompleter
+"#;
+
+#[cfg(test)]
+mod tests {
+  use super::{
+    POWERSHELL_PROFILE_END_MARKER, POWERSHELL_PROFILE_START_MARKER, POWERSHELL_SCRIPT,
+    powershell_profile_paths_in, powershell_profile_snippet, upsert_managed_block,
+  };
+  use std::path::Path;
+
+  #[test]
+  fn powershell_profile_paths_cover_both_shells() {
+    let profiles = powershell_profile_paths_in(Path::new("/tmp/Documents"));
+
+    assert_eq!(profiles.len(), 2);
+    assert!(profiles[0].ends_with("PowerShell/Microsoft.PowerShell_profile.ps1"));
+    assert!(profiles[1].ends_with("WindowsPowerShell/Microsoft.PowerShell_profile.ps1"));
+  }
+
+  #[test]
+  fn powershell_profile_snippet_embeds_script_path() {
+    let snippet = powershell_profile_snippet(Path::new(
+      "C:\\Users\\maksym\\.oxide\\completions\\oxide.ps1",
+    ));
+
+    assert!(snippet.contains(POWERSHELL_PROFILE_START_MARKER));
+    assert!(snippet.contains(POWERSHELL_PROFILE_END_MARKER));
+    assert!(
+      snippet
+        .contains("$oxideCompletionScript = 'C:\\Users\\maksym\\.oxide\\completions\\oxide.ps1'")
+    );
+  }
+
+  #[test]
+  fn upsert_managed_block_appends_once() {
+    let block =
+      format!("{POWERSHELL_PROFILE_START_MARKER}\nmanaged\n{POWERSHELL_PROFILE_END_MARKER}");
+
+    let updated = upsert_managed_block(
+      "Set-PSReadLineOption -EditMode Windows\n",
+      &block,
+      POWERSHELL_PROFILE_START_MARKER,
+      POWERSHELL_PROFILE_END_MARKER,
+    );
+    let updated_again = upsert_managed_block(
+      &updated,
+      &block,
+      POWERSHELL_PROFILE_START_MARKER,
+      POWERSHELL_PROFILE_END_MARKER,
+    );
+
+    assert_eq!(updated, updated_again);
+    assert_eq!(updated.matches(POWERSHELL_PROFILE_START_MARKER).count(), 1);
+  }
+
+  #[test]
+  fn powershell_script_mentions_native_registration() {
+    assert!(POWERSHELL_SCRIPT.contains("Register-ArgumentCompleter"));
+    assert!(POWERSHELL_SCRIPT.contains("Native"));
+    assert!(POWERSHELL_SCRIPT.contains("_complete"));
+  }
+}

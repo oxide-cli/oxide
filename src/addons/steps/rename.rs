@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::addons::manifest::RenameStep;
 
@@ -27,4 +27,3 @@ pub fn execute_rename(
 
   Ok(vec![Rollback::RenameFile { from: to, to: from }])
 }
-

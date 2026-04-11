@@ -176,7 +176,10 @@ fn path_traversal_with_tera_file_blocked() {
 
   let mut tera = Tera::default();
   let result = extract_dir_contents(&files, dir.path(), &mut tera, &make_context("app"));
-  assert!(result.is_err(), "single-level traversal should also be blocked");
+  assert!(
+    result.is_err(),
+    "single-level traversal should also be blocked"
+  );
 }
 
 // ── extract_dir_contents: Tera variable substitution ─────────────────────────

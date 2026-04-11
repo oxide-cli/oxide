@@ -26,7 +26,10 @@ impl OxidePaths {
       templates: oxide_home.join("cache").join("templates"),
       auth: oxide_home.join("auth.json"),
       addons: oxide_home.join("cache").join("addons"),
-      addons_index: oxide_home.join("cache").join("addons").join("oxide-addons.json"),
+      addons_index: oxide_home
+        .join("cache")
+        .join("addons")
+        .join("oxide-addons.json"),
     })
   }
 

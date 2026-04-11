@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::addons::manifest::MoveStep;
 
@@ -30,4 +30,3 @@ pub fn execute_move(
 
   Ok(vec![Rollback::RenameFile { from: to, to: from }])
 }
-

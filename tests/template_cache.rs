@@ -16,7 +16,10 @@ fn make_test_ctx(templates_dir: &std::path::Path) -> AppContext {
     templates: templates_dir.to_path_buf(),
     auth: templates_dir.join("auth.json"),
     addons: templates_dir.join("cache").join("addons"),
-    addons_index: templates_dir.join("cache").join("addons").join("oxide-addons.json"),
+    addons_index: templates_dir
+      .join("cache")
+      .join("addons")
+      .join("oxide-addons.json"),
   };
   AppContext {
     paths,
@@ -78,7 +81,11 @@ fn remove_template_removes_entry_and_dir() {
   let dir = assert_fs::TempDir::new().unwrap();
   write_oxide_template_json(&dir, "react-vite", "react-vite");
   update_templates_cache(dir.path(), std::path::Path::new("react-vite"), "abc").unwrap();
-  dir.child("react-vite").child("index.js").write_str("").unwrap();
+  dir
+    .child("react-vite")
+    .child("index.js")
+    .write_str("")
+    .unwrap();
 
   remove_template_from_cache(dir.path(), "react-vite").unwrap();
 

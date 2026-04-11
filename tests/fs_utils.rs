@@ -36,8 +36,17 @@ fn read_flat_dir_captures_contents() {
 #[test]
 fn read_nested_dir_finds_all_files() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("src").child("index.ts").write_str("export {}").unwrap();
-  dir.child("src").child("utils").child("helper.ts").write_str("export {}").unwrap();
+  dir
+    .child("src")
+    .child("index.ts")
+    .write_str("export {}")
+    .unwrap();
+  dir
+    .child("src")
+    .child("utils")
+    .child("helper.ts")
+    .write_str("export {}")
+    .unwrap();
   dir.child("README.md").write_str("# readme").unwrap();
 
   let files = read_dir_to_files(dir.path()).unwrap();
@@ -51,7 +60,10 @@ fn read_nested_dir_returns_relative_paths() {
 
   let files = read_dir_to_files(dir.path()).unwrap();
   let path_str = files[0].path.to_string_lossy();
-  assert!(path_str.contains("index.ts"), "expected index.ts in path, got: {path_str}");
+  assert!(
+    path_str.contains("index.ts"),
+    "expected index.ts in path, got: {path_str}"
+  );
   assert!(!files[0].path.is_absolute());
 }
 

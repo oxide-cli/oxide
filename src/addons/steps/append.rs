@@ -26,7 +26,10 @@ pub fn execute_append(
     }
     new_content.push_str(&rendered);
 
-    rollbacks.push(Rollback::RestoreFile { path: path.clone(), original });
+    rollbacks.push(Rollback::RestoreFile {
+      path: path.clone(),
+      original,
+    });
     std::fs::write(&path, new_content)?;
   }
 

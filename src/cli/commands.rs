@@ -92,9 +92,12 @@ pub enum Commands {
     command: AddonCommands,
   },
 
-  #[command(about = "Generate a shell completion script (bash, zsh, fish)")]
+  #[command(about = "Install shell completions for: bash, zsh, fish, powershell")]
   Completions {
-    #[arg(value_name = "SHELL", help = "Shell to generate completions for: bash, zsh, fish")]
+    #[arg(
+      value_name = "SHELL",
+      help = "Shell to install completions for: bash, zsh, fish, powershell"
+    )]
     shell: String,
   },
 

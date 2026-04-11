@@ -40,7 +40,13 @@ async fn get_template_info(
 }
 
 pub async fn install_template(ctx: &AppContext, template_name: &str) -> Result<()> {
-  let info = get_template_info(template_name, &ctx.client, &ctx.paths.auth, &ctx.backend_url).await?;
+  let info = get_template_info(
+    template_name,
+    &ctx.client,
+    &ctx.paths.auth,
+    &ctx.backend_url,
+  )
+  .await?;
 
   // Skip download if the cached commit matches the server's latest
   if let Some(cached) = get_cached_template(ctx, template_name)?

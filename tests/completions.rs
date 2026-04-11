@@ -33,7 +33,10 @@ fn with_populated_cache_does_not_crash() {
       }
     ]
   });
-  dir.child("oxide-addons.json").write_str(&cache.to_string()).unwrap();
+  dir
+    .child("oxide-addons.json")
+    .write_str(&cache.to_string())
+    .unwrap();
 
   print_dynamic_completions(dir.path(), None);
 }
@@ -58,7 +61,9 @@ fn with_addon_manifest_does_not_crash() {
       }
     ]
   });
-  dir.child("drizzle").child("oxide.addon.json")
+  dir
+    .child("drizzle")
+    .child("oxide.addon.json")
     .write_str(&manifest.to_string())
     .unwrap();
 
@@ -68,7 +73,10 @@ fn with_addon_manifest_does_not_crash() {
 #[test]
 fn malformed_cache_does_not_crash() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("oxide-addons.json").write_str("not valid json {{{{").unwrap();
+  dir
+    .child("oxide-addons.json")
+    .write_str("not valid json {{{{")
+    .unwrap();
 
   // Should silently ignore parse error
   print_dynamic_completions(dir.path(), None);
@@ -77,7 +85,11 @@ fn malformed_cache_does_not_crash() {
 #[test]
 fn malformed_manifest_does_not_crash() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("drizzle").child("oxide.addon.json").write_str("{ bad json").unwrap();
+  dir
+    .child("drizzle")
+    .child("oxide.addon.json")
+    .write_str("{ bad json")
+    .unwrap();
 
   print_dynamic_completions(dir.path(), Some("drizzle"));
 }

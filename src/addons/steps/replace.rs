@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use inquire::Select;
 
 use crate::addons::manifest::{IfNotFound, ReplaceStep};
@@ -26,7 +26,11 @@ pub fn execute_replace(
       match step.if_not_found {
         IfNotFound::Skip => continue,
         IfNotFound::Error => {
-          return Err(anyhow!("Pattern {:?} not found in {}", step.find, path.display()));
+          return Err(anyhow!(
+            "Pattern {:?} not found in {}",
+            step.find,
+            path.display()
+          ));
         }
         IfNotFound::WarnAndAsk => {
           eprintln!("Warning: {:?} not found in {}", step.find, path.display());
@@ -41,7 +45,10 @@ pub fn execute_replace(
     }
 
     let new_content = content.replace(&step.find, &rendered_replace);
-    rollbacks.push(Rollback::RestoreFile { path: path.clone(), original });
+    rollbacks.push(Rollback::RestoreFile {
+      path: path.clone(),
+      original,
+    });
     std::fs::write(&path, new_content)?;
   }
 

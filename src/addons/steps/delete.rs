@@ -13,7 +13,10 @@ pub fn execute_delete(step: &DeleteStep, project_root: &Path) -> Result<Vec<Roll
   for path in paths {
     if path.exists() {
       let original = std::fs::read(&path)?;
-      rollbacks.push(Rollback::RestoreFile { path: path.clone(), original });
+      rollbacks.push(Rollback::RestoreFile {
+        path: path.clone(),
+        original,
+      });
       std::fs::remove_file(&path)?;
     }
   }

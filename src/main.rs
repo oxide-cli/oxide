@@ -3,13 +3,14 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::Parser;
 use oxide_cli::{
-  AppContext, CleanupState, addons, completions,
+  AppContext, CleanupState, addons,
   auth::{account::print_user_info, login::login, logout::logout},
   cache::{get_installed_templates, remove_template_from_cache},
   cli::{
     Cli,
     commands::{AddonCommands, Commands, TemplateCommands},
   },
+  completions,
   paths::OxidePaths,
   templates::{
     generator::extract_template, install::install_template, loader::get_files, publish::publish,

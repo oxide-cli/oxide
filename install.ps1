@@ -60,6 +60,17 @@ try {
         Write-Host "$INSTALL_DIR is already in your PATH" -ForegroundColor Green
     }
 
+    Write-Host "Configuring PowerShell completions..." -ForegroundColor Cyan
+    try {
+        & $destPath completions powershell
+        if ($LASTEXITCODE -ne 0) {
+            throw "oxide exited with code $LASTEXITCODE"
+        }
+    } catch {
+        Write-Host "PowerShell completions were not configured automatically: $_" -ForegroundColor Yellow
+        Write-Host "Run manually: & '$destPath' completions powershell" -ForegroundColor Yellow
+    }
+
 } catch {
     Write-Host "Installation failed: $_" -ForegroundColor Red
     exit 1

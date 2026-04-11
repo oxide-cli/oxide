@@ -29,10 +29,16 @@ pub fn execute_create(
         if !overwrite {
           return Ok(rollbacks);
         }
-        rollbacks.push(Rollback::RestoreFile { path: path.clone(), original: std::fs::read(&path)? });
+        rollbacks.push(Rollback::RestoreFile {
+          path: path.clone(),
+          original: std::fs::read(&path)?,
+        });
       }
       IfExists::Overwrite => {
-        rollbacks.push(Rollback::RestoreFile { path: path.clone(), original: std::fs::read(&path)? });
+        rollbacks.push(Rollback::RestoreFile {
+          path: path.clone(),
+          original: std::fs::read(&path)?,
+        });
       }
     }
   } else {

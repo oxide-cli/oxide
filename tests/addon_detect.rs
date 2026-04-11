@@ -11,7 +11,10 @@ fn file_exists_matches() {
 
   let detect = vec![DetectBlock {
     id: "node".into(),
-    rules: vec![DetectRule::FileExists { file: "package.json".into(), negate: false }],
+    rules: vec![DetectRule::FileExists {
+      file: "package.json".into(),
+      negate: false,
+    }],
     match_mode: MatchMode::Any,
   }];
 
@@ -24,11 +27,17 @@ fn file_exists_negate() {
 
   let detect = vec![DetectBlock {
     id: "no-package".into(),
-    rules: vec![DetectRule::FileExists { file: "package.json".into(), negate: true }],
+    rules: vec![DetectRule::FileExists {
+      file: "package.json".into(),
+      negate: true,
+    }],
     match_mode: MatchMode::Any,
   }];
 
-  assert_eq!(detect_variant(&detect, dir.path()), Some("no-package".into()));
+  assert_eq!(
+    detect_variant(&detect, dir.path()),
+    Some("no-package".into())
+  );
 }
 
 #[test]
@@ -82,8 +91,14 @@ fn match_mode_all_requires_all_rules() {
   let detect = vec![DetectBlock {
     id: "both".into(),
     rules: vec![
-      DetectRule::FileExists { file: "package.json".into(), negate: false },
-      DetectRule::FileExists { file: "tsconfig.json".into(), negate: false },
+      DetectRule::FileExists {
+        file: "package.json".into(),
+        negate: false,
+      },
+      DetectRule::FileExists {
+        file: "tsconfig.json".into(),
+        negate: false,
+      },
     ],
     match_mode: MatchMode::All,
   }];
@@ -97,7 +112,10 @@ fn no_matching_block_returns_none() {
 
   let detect = vec![DetectBlock {
     id: "node".into(),
-    rules: vec![DetectRule::FileExists { file: "package.json".into(), negate: false }],
+    rules: vec![DetectRule::FileExists {
+      file: "package.json".into(),
+      negate: false,
+    }],
     match_mode: MatchMode::Any,
   }];
 
@@ -110,7 +128,10 @@ fn no_matching_block_returns_none() {
 fn file_contains_negate_matches_when_content_absent() {
   // negate=true means: rule passes when the file does NOT contain the string
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("app.js").write_str("const koa = require('koa');").unwrap();
+  dir
+    .child("app.js")
+    .write_str("const koa = require('koa');")
+    .unwrap();
 
   let detect = vec![DetectBlock {
     id: "no-express".into(),
@@ -122,13 +143,19 @@ fn file_contains_negate_matches_when_content_absent() {
     match_mode: MatchMode::Any,
   }];
 
-  assert_eq!(detect_variant(&detect, dir.path()), Some("no-express".into()));
+  assert_eq!(
+    detect_variant(&detect, dir.path()),
+    Some("no-express".into())
+  );
 }
 
 #[test]
 fn file_contains_negate_no_match_when_content_present() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("app.js").write_str("const express = require('express');").unwrap();
+  dir
+    .child("app.js")
+    .write_str("const express = require('express');")
+    .unwrap();
 
   let detect = vec![DetectBlock {
     id: "no-express".into(),
@@ -320,7 +347,10 @@ fn yaml_contains_key_path_match() {
 #[test]
 fn yaml_contains_value_matches() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("config.yaml").write_str("env: production\n").unwrap();
+  dir
+    .child("config.yaml")
+    .write_str("env: production\n")
+    .unwrap();
 
   let detect = vec![DetectBlock {
     id: "prod".into(),
@@ -339,7 +369,10 @@ fn yaml_contains_value_matches() {
 #[test]
 fn yaml_contains_value_no_match_when_different() {
   let dir = assert_fs::TempDir::new().unwrap();
-  dir.child("config.yaml").write_str("env: staging\n").unwrap();
+  dir
+    .child("config.yaml")
+    .write_str("env: staging\n")
+    .unwrap();
 
   let detect = vec![DetectBlock {
     id: "prod".into(),
@@ -384,8 +417,14 @@ fn match_mode_all_returns_id_when_all_rules_pass() {
   let detect = vec![DetectBlock {
     id: "ts-node".into(),
     rules: vec![
-      DetectRule::FileExists { file: "package.json".into(), negate: false },
-      DetectRule::FileExists { file: "tsconfig.json".into(), negate: false },
+      DetectRule::FileExists {
+        file: "package.json".into(),
+        negate: false,
+      },
+      DetectRule::FileExists {
+        file: "tsconfig.json".into(),
+        negate: false,
+      },
     ],
     match_mode: MatchMode::All,
   }];
@@ -404,12 +443,18 @@ fn first_matching_block_is_returned() {
   let detect = vec![
     DetectBlock {
       id: "first".into(),
-      rules: vec![DetectRule::FileExists { file: "package.json".into(), negate: false }],
+      rules: vec![DetectRule::FileExists {
+        file: "package.json".into(),
+        negate: false,
+      }],
       match_mode: MatchMode::Any,
     },
     DetectBlock {
       id: "second".into(),
-      rules: vec![DetectRule::FileExists { file: "tsconfig.json".into(), negate: false }],
+      rules: vec![DetectRule::FileExists {
+        file: "tsconfig.json".into(),
+        negate: false,
+      }],
       match_mode: MatchMode::Any,
     },
   ];
@@ -426,12 +471,18 @@ fn second_block_returned_when_first_doesnt_match() {
   let detect = vec![
     DetectBlock {
       id: "first".into(),
-      rules: vec![DetectRule::FileExists { file: "package.json".into(), negate: false }],
+      rules: vec![DetectRule::FileExists {
+        file: "package.json".into(),
+        negate: false,
+      }],
       match_mode: MatchMode::Any,
     },
     DetectBlock {
       id: "second".into(),
-      rules: vec![DetectRule::FileExists { file: "tsconfig.json".into(), negate: false }],
+      rules: vec![DetectRule::FileExists {
+        file: "tsconfig.json".into(),
+        negate: false,
+      }],
       match_mode: MatchMode::Any,
     },
   ];

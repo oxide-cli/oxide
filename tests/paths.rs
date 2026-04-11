@@ -55,7 +55,11 @@ fn ensure_directories_creates_cache_dir() {
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
     addons: dir.path().join("cache").join("addons"),
-    addons_index: dir.path().join("cache").join("addons").join("oxide-addons.json"),
+    addons_index: dir
+      .path()
+      .join("cache")
+      .join("addons")
+      .join("oxide-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -73,7 +77,11 @@ fn ensure_directories_creates_templates_dir() {
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
     addons: dir.path().join("cache").join("addons"),
-    addons_index: dir.path().join("cache").join("addons").join("oxide-addons.json"),
+    addons_index: dir
+      .path()
+      .join("cache")
+      .join("addons")
+      .join("oxide-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -91,7 +99,11 @@ fn ensure_directories_creates_addons_dir() {
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
     addons: dir.path().join("cache").join("addons"),
-    addons_index: dir.path().join("cache").join("addons").join("oxide-addons.json"),
+    addons_index: dir
+      .path()
+      .join("cache")
+      .join("addons")
+      .join("oxide-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -109,7 +121,11 @@ fn ensure_directories_is_idempotent() {
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
     addons: dir.path().join("cache").join("addons"),
-    addons_index: dir.path().join("cache").join("addons").join("oxide-addons.json"),
+    addons_index: dir
+      .path()
+      .join("cache")
+      .join("addons")
+      .join("oxide-addons.json"),
   };
 
   // Running twice should not fail

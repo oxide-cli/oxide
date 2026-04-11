@@ -1,4 +1,6 @@
-use oxide_cli::utils::validate::{is_valid_github_repo_url, validate_project_name, validate_template_name};
+use oxide_cli::utils::validate::{
+  is_valid_github_repo_url, validate_project_name, validate_template_name,
+};
 
 // ── validate_project_name ─────────────────────────────────────────────────────
 
@@ -28,7 +30,10 @@ fn project_name_too_long_is_err() {
 #[test]
 fn project_name_invalid_chars() {
   for name in ["my project", "my/project", "my@project", "my!project"] {
-    assert!(validate_project_name(name).is_err(), "{name} should be invalid");
+    assert!(
+      validate_project_name(name).is_err(),
+      "{name} should be invalid"
+    );
   }
 }
 
@@ -50,7 +55,10 @@ fn project_name_ends_with_space() {
 #[test]
 fn project_name_reserved_windows() {
   for name in ["CON", "con", "NUL", "nul", "COM1", "LPT9"] {
-    assert!(validate_project_name(name).is_err(), "{name} should be reserved");
+    assert!(
+      validate_project_name(name).is_err(),
+      "{name} should be reserved"
+    );
   }
 }
 
@@ -85,14 +93,20 @@ fn github_url_no_repo_path() {
 #[test]
 fn template_name_valid() {
   for name in ["react-vite-ts", "NextJS", "my_template", "template123"] {
-    assert!(validate_template_name(name).is_ok(), "{name} should be valid");
+    assert!(
+      validate_template_name(name).is_ok(),
+      "{name} should be valid"
+    );
   }
 }
 
 #[test]
 fn template_name_invalid() {
   for name in ["my template", "my.template", "my/template", "my@template"] {
-    assert!(validate_template_name(name).is_err(), "{name} should be invalid");
+    assert!(
+      validate_template_name(name).is_err(),
+      "{name} should be invalid"
+    );
   }
 }
 
