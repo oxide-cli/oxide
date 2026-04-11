@@ -33,7 +33,7 @@ Unix installers place the `oxide` binary in `~/.local/bin`. Cargo installs it in
 ### Install with npm
 
 ```bash
-npm install -g @oxide/oxide-cli
+npm install -g @oxide-cli/oxide
 ```
 
 The npm package downloads the matching prebuilt Oxide binary during `postinstall`.

@@ -1,12 +1,12 @@
 {
 	"name": "@oxide-cli/oxide",
-	"version": "0.8.0",
-	"binaryVersion": "0.8.0",
+	"version": "0.8.1",
+	"binaryVersion": "0.8.1",
 	"description": "CLI for scaffolding projects from remote templates and extending them with project addons",
 	"homepage": "https://github.com/oxide-cli/oxide",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/oxide/oxide.git"
+		"url": "git+https://github.com/oxide-cli/oxide.git"
 	},
 	"license": "MIT OR Apache-2.0",
 	"bin": {

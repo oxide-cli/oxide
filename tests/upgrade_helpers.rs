@@ -66,7 +66,12 @@ fn cache_is_stale_after_one_hour() {
 
 #[test]
 fn render_upgrade_notice_mentions_upgrade_command() {
-  let notice = render_upgrade_notice("0.8.0");
+  let mut parts = env!("CARGO_PKG_VERSION").split('.');
+  let major = parts.next().unwrap();
+  let minor = parts.next().unwrap();
+  let patch: u64 = parts.next().unwrap().parse().unwrap();
+  let latest = format!("{major}.{minor}.{}", patch + 1);
+  let notice = render_upgrade_notice(&latest);
   assert!(notice.contains("Run `oxide upgrade` to update."));
-  assert!(notice.contains(&format!("v{} → v0.8.0", env!("CARGO_PKG_VERSION"))));
+  assert!(notice.contains(&format!("v{} → v{}", env!("CARGO_PKG_VERSION"), latest)));
 }

@@ -9,6 +9,7 @@ const { spawnSync } = require('child_process');
 
 const PLATFORM_MAP = {
   'linux-x64':    { name: 'linux-x86_64',   ext: 'tar.gz', binary: 'oxide'     },
+  'linux-arm64':  { name: 'linux-aarch64',  ext: 'tar.gz', binary: 'oxide'     },
   'darwin-arm64': { name: 'macos-aarch64',  ext: 'tar.gz', binary: 'oxide'     },
   'win32-x64':    { name: 'windows-x86_64', ext: 'zip',    binary: 'oxide.exe' },
 };
@@ -18,6 +19,7 @@ const platform = PLATFORM_MAP[key];
 if (!platform) {
   console.error(
     `oxide-cli: unsupported platform "${key}". ` +
+    `Supported via npm: linux-x64, linux-arm64, darwin-arm64, win32-x64. ` +
     `Install manually from https://github.com/oxide-cli/oxide/releases`
   );
   process.exit(1);
