@@ -5,10 +5,12 @@ Oxide is a Rust CLI for scaffolding JavaScript and TypeScript projects from remo
 It supports:
 
 - creating a new project from a template
-- caching templates locally and skipping unchanged downloads
+- checking cached templates and addons for updates before use
 - authenticating against the Oxide service
 - publishing GitHub repositories as Oxide templates
 - installing cached addons and running addon commands inside a project
+- upgrading the CLI from GitHub Releases with `oxide upgrade`
+- notifying you when a newer Oxide version is available
 
 ## Installation
 
@@ -65,7 +67,7 @@ Create a new project from a template:
 oxide new my-app react-vite-ts
 ```
 
-If the template is not cached yet, Oxide downloads it automatically before generating the project.
+Oxide checks whether the cached template is current before generating the project. If a newer template version exists, it updates the local cache first.
 
 ## Command overview
 
@@ -78,6 +80,7 @@ oxide login
 oxide logout
 oxide account
 oxide addon <COMMAND>
+oxide upgrade
 oxide <ADDON_ID> <COMMAND>
 ```
 
@@ -115,6 +118,12 @@ cd my-app
 oxide drizzle init
 ```
 
+Upgrade Oxide itself:
+
+```bash
+oxide upgrade
+```
+
 Aliases:
 
 - `oxide n ...` for `oxide new ...`
@@ -130,6 +139,8 @@ Install or refresh a template in the local cache:
 ```bash
 oxide template install react-vite-ts
 ```
+
+When you run `oxide new`, Oxide also refreshes the template cache automatically if a newer version is available.
 
 List cached templates:
 
@@ -167,6 +178,8 @@ Install an addon:
 oxide addon install drizzle
 ```
 
+When you run an addon command such as `oxide drizzle init`, Oxide checks for a newer cached addon version first. If the add-on updated and the command is marked `once: true`, Oxide prompts you to re-run it.
+
 List installed addons:
 
 ```bash
@@ -191,6 +204,14 @@ Update a published addon:
 oxide addon update https://github.com/owner/repo
 ```
 
+Upgrade the CLI to the latest release:
+
+```bash
+oxide upgrade
+```
+
+After most commands, Oxide performs a background version check and prints a short upgrade notice when a newer CLI release is available.
+
 ## Local data and generated files
 
 Oxide stores local state under `~/.oxide/`:
@@ -199,9 +220,10 @@ Oxide stores local state under `~/.oxide/`:
 - cached addons in `~/.oxide/cache/addons`
 - template cache index in `~/.oxide/cache/templates/oxide-templates.json`
 - addon cache index in `~/.oxide/cache/addons/oxide-addons.json`
+- CLI version-check cache in `~/.oxide/version_check.json`
 - authentication data in `~/.oxide/auth.json`
 
-When addon commands run inside a project, Oxide records execution state in `oxide.lock` in the project root.
+When addon commands run inside a project, Oxide records execution state in `oxide.lock` in the project root, including the add-on version used for each executed command.
 
 ## Templates
 
