@@ -235,6 +235,31 @@ if (Test-Path $oxideCompletionScript) {{\n\
   )
 }
 
+#[doc(hidden)]
+pub fn powershell_profile_paths_in_for_tests(documents_dir: &Path) -> Vec<PathBuf> {
+  powershell_profile_paths_in(documents_dir)
+}
+
+#[doc(hidden)]
+pub fn powershell_profile_snippet_for_tests(script_path: &Path) -> String {
+  powershell_profile_snippet(script_path)
+}
+
+#[doc(hidden)]
+pub fn upsert_managed_block_for_tests(
+  content: &str,
+  block: &str,
+  start_marker: &str,
+  end_marker: &str,
+) -> String {
+  upsert_managed_block(content, block, start_marker, end_marker)
+}
+
+#[doc(hidden)]
+pub fn powershell_script_for_tests() -> &'static str {
+  POWERSHELL_SCRIPT
+}
+
 fn powershell_single_quote(path: &Path) -> String {
   path.to_string_lossy().replace('\'', "''")
 }
@@ -645,64 +670,3 @@ if ((Get-Command Register-ArgumentCompleter).Parameters.ContainsKey('Native')) {
 
 Register-ArgumentCompleter @registerOxideCompleter
 "#;
-
-#[cfg(test)]
-mod tests {
-  use super::{
-    POWERSHELL_PROFILE_END_MARKER, POWERSHELL_PROFILE_START_MARKER, POWERSHELL_SCRIPT,
-    powershell_profile_paths_in, powershell_profile_snippet, upsert_managed_block,
-  };
-  use std::path::Path;
-
-  #[test]
-  fn powershell_profile_paths_cover_both_shells() {
-    let profiles = powershell_profile_paths_in(Path::new("/tmp/Documents"));
-
-    assert_eq!(profiles.len(), 2);
-    assert!(profiles[0].ends_with("PowerShell/Microsoft.PowerShell_profile.ps1"));
-    assert!(profiles[1].ends_with("WindowsPowerShell/Microsoft.PowerShell_profile.ps1"));
-  }
-
-  #[test]
-  fn powershell_profile_snippet_embeds_script_path() {
-    let snippet = powershell_profile_snippet(Path::new(
-      "C:\\Users\\maksym\\.oxide\\completions\\oxide.ps1",
-    ));
-
-    assert!(snippet.contains(POWERSHELL_PROFILE_START_MARKER));
-    assert!(snippet.contains(POWERSHELL_PROFILE_END_MARKER));
-    assert!(
-      snippet
-        .contains("$oxideCompletionScript = 'C:\\Users\\maksym\\.oxide\\completions\\oxide.ps1'")
-    );
-  }
-
-  #[test]
-  fn upsert_managed_block_appends_once() {
-    let block =
-      format!("{POWERSHELL_PROFILE_START_MARKER}\nmanaged\n{POWERSHELL_PROFILE_END_MARKER}");
-
-    let updated = upsert_managed_block(
-      "Set-PSReadLineOption -EditMode Windows\n",
-      &block,
-      POWERSHELL_PROFILE_START_MARKER,
-      POWERSHELL_PROFILE_END_MARKER,
-    );
-    let updated_again = upsert_managed_block(
-      &updated,
-      &block,
-      POWERSHELL_PROFILE_START_MARKER,
-      POWERSHELL_PROFILE_END_MARKER,
-    );
-
-    assert_eq!(updated, updated_again);
-    assert_eq!(updated.matches(POWERSHELL_PROFILE_START_MARKER).count(), 1);
-  }
-
-  #[test]
-  fn powershell_script_mentions_native_registration() {
-    assert!(POWERSHELL_SCRIPT.contains("Register-ArgumentCompleter"));
-    assert!(POWERSHELL_SCRIPT.contains("Native"));
-    assert!(POWERSHELL_SCRIPT.contains("_complete"));
-  }
-}

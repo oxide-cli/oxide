@@ -70,6 +70,19 @@ fn classify_install_state(
   }
 }
 
+#[doc(hidden)]
+pub fn classify_install_state_for_tests(
+  cached_template: Option<&CachedTemplate>,
+  template_dir_exists: bool,
+  latest_commit_sha: &str,
+) -> &'static str {
+  match classify_install_state(cached_template, template_dir_exists, latest_commit_sha) {
+    InstallState::Install => "install",
+    InstallState::Update => "update",
+    InstallState::UpToDate => "up_to_date",
+  }
+}
+
 async fn get_template_info(
   template_name: &str,
   client: &Client,
@@ -142,66 +155,4 @@ pub async fn install_template(ctx: &AppContext, template_name: &str) -> Result<I
     },
     InstallState::UpToDate => unreachable!("up-to-date templates should return early"),
   })
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{InstallResult, InstallState, classify_install_state};
-  use crate::cache::CachedTemplate;
-
-  fn cached_template(commit_sha: &str) -> CachedTemplate {
-    CachedTemplate {
-      name: "react-vite".to_string(),
-      version: "1.0.0".to_string(),
-      source: "https://github.com/example/react-vite".to_string(),
-      path: "react-vite".to_string(),
-      official: true,
-      commit_sha: commit_sha.to_string(),
-    }
-  }
-
-  #[test]
-  fn classify_install_state_returns_install_when_template_is_not_cached() {
-    let install_state = classify_install_state(None, true, "sha-1");
-    assert_eq!(install_state, InstallState::Install);
-  }
-
-  #[test]
-  fn classify_install_state_returns_install_when_directory_is_missing() {
-    let cached_template = cached_template("sha-1");
-    let install_state = classify_install_state(Some(&cached_template), false, "sha-1");
-    assert_eq!(install_state, InstallState::Install);
-  }
-
-  #[test]
-  fn classify_install_state_returns_up_to_date_when_commit_matches() {
-    let cached_template = cached_template("sha-1");
-    let install_state = classify_install_state(Some(&cached_template), true, "sha-1");
-    assert_eq!(install_state, InstallState::UpToDate);
-  }
-
-  #[test]
-  fn classify_install_state_returns_update_when_commit_differs() {
-    let cached_template = cached_template("sha-1");
-    let install_state = classify_install_state(Some(&cached_template), true, "sha-2");
-    assert_eq!(install_state, InstallState::Update);
-  }
-
-  #[test]
-  fn install_result_message_formats_update_message_with_version() {
-    let message = InstallResult::Updated {
-      version: "1.2.3".to_string(),
-    }
-    .message("react-vite");
-    assert_eq!(
-      message.as_deref(),
-      Some("Template 'react-vite' updated to v1.2.3")
-    );
-  }
-
-  #[test]
-  fn install_result_message_is_silent_for_up_to_date_templates() {
-    let message = InstallResult::UpToDate.message("react-vite");
-    assert!(message.is_none());
-  }
 }

@@ -126,6 +126,11 @@ fn normalize_version_tag(tag_name: &str) -> Result<String> {
   Ok(version.to_string())
 }
 
+#[doc(hidden)]
+pub fn normalize_version_tag_for_tests(tag_name: &str) -> Result<String> {
+  normalize_version_tag(tag_name)
+}
+
 fn read_version_check_cache(path: &Path) -> Result<Option<VersionCheckCache>> {
   if !path.exists() {
     return Ok(None);
@@ -162,6 +167,11 @@ fn parse_version(version: &str) -> Result<(u64, u64, u64)> {
   Ok((major, minor, patch))
 }
 
+#[doc(hidden)]
+pub fn parse_version_for_tests(version: &str) -> Result<(u64, u64, u64)> {
+  parse_version(version)
+}
+
 fn parse_version_component(component: Option<&str>, label: &str, version: &str) -> Result<u64> {
   let component =
     component.ok_or_else(|| anyhow!("Missing {label} version component in '{version}'"))?;
@@ -172,6 +182,11 @@ fn parse_version_component(component: Option<&str>, label: &str, version: &str) 
 
 fn is_newer_version(current: &str, latest: &str) -> Result<bool> {
   Ok(parse_version(latest)? > parse_version(current)?)
+}
+
+#[doc(hidden)]
+pub fn is_newer_version_for_tests(current: &str, latest: &str) -> Result<bool> {
+  is_newer_version(current, latest)
 }
 
 fn newer_version_if_available(latest: &str) -> Result<Option<String>> {
@@ -188,6 +203,21 @@ fn is_cache_fresh(cache: &VersionCheckCache, now: DateTime<Utc>) -> bool {
   };
 
   now.signed_duration_since(last_checked.with_timezone(&Utc)) < ChronoDuration::hours(1)
+}
+
+#[doc(hidden)]
+pub fn is_cache_fresh_for_tests(
+  last_checked: &str,
+  latest_version: &str,
+  now: DateTime<Utc>,
+) -> bool {
+  is_cache_fresh(
+    &VersionCheckCache {
+      last_checked: last_checked.to_string(),
+      latest_version: latest_version.to_string(),
+    },
+    now,
+  )
 }
 
 fn current_platform() -> Result<&'static str> {
@@ -214,12 +244,22 @@ fn asset_filename(platform: &str) -> String {
   }
 }
 
+#[doc(hidden)]
+pub fn asset_filename_for_tests(platform: &str) -> String {
+  asset_filename(platform)
+}
+
 fn release_asset_url(version: &str, platform: &str) -> String {
   format!(
     "{}/v{version}/{}",
     releases_download_base_url(),
     asset_filename(platform)
   )
+}
+
+#[doc(hidden)]
+pub fn release_asset_url_for_tests(version: &str, platform: &str) -> String {
+  release_asset_url(version, platform)
 }
 
 fn write_temp_binary(current_exe: &Path, binary: &[u8]) -> Result<PathBuf> {
@@ -316,73 +356,4 @@ fn path_for_shell(path: &Path) -> Result<String> {
     .to_str()
     .map(ToOwned::to_owned)
     .ok_or_else(|| anyhow!("Path '{}' is not valid UTF-8", path.display()))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{
-    VersionCheckCache, asset_filename, is_cache_fresh, is_newer_version, normalize_version_tag,
-    parse_version, release_asset_url, render_upgrade_notice,
-  };
-  use chrono::{TimeZone, Utc};
-
-  #[test]
-  fn normalize_version_tag_strips_leading_v() {
-    let version = normalize_version_tag("v1.2.3").unwrap();
-    assert_eq!(version, "1.2.3");
-  }
-
-  #[test]
-  fn parse_version_rejects_invalid_formats() {
-    let error = parse_version("1.2").unwrap_err();
-    assert!(error.to_string().contains("patch"));
-  }
-
-  #[test]
-  fn is_newer_version_compares_numeric_components() {
-    assert!(is_newer_version("0.7.4", "0.8.0").unwrap());
-    assert!(!is_newer_version("0.8.0", "0.7.4").unwrap());
-  }
-
-  #[test]
-  fn asset_filename_appends_exe_for_windows_builds() {
-    assert_eq!(asset_filename("windows-x86_64"), "oxide-windows-x86_64.exe");
-    assert_eq!(asset_filename("linux-x86_64"), "oxide-linux-x86_64");
-  }
-
-  #[test]
-  fn release_asset_url_uses_expected_github_pattern() {
-    let asset_url = release_asset_url("1.2.3", "linux-x86_64");
-    assert_eq!(
-      asset_url,
-      "https://github.com/oxide-cli/oxide/releases/download/v1.2.3/oxide-linux-x86_64"
-    );
-  }
-
-  #[test]
-  fn cache_is_fresh_for_recent_version_checks() {
-    let cache = VersionCheckCache {
-      last_checked: "2026-04-11T10:00:00Z".to_string(),
-      latest_version: "0.8.0".to_string(),
-    };
-    let now = Utc.with_ymd_and_hms(2026, 4, 11, 10, 30, 0).unwrap();
-    assert!(is_cache_fresh(&cache, now));
-  }
-
-  #[test]
-  fn cache_is_stale_after_one_hour() {
-    let cache = VersionCheckCache {
-      last_checked: "2026-04-11T10:00:00Z".to_string(),
-      latest_version: "0.8.0".to_string(),
-    };
-    let now = Utc.with_ymd_and_hms(2026, 4, 11, 11, 0, 1).unwrap();
-    assert!(!is_cache_fresh(&cache, now));
-  }
-
-  #[test]
-  fn render_upgrade_notice_mentions_upgrade_command() {
-    let notice = render_upgrade_notice("0.8.0");
-    assert!(notice.contains("Run `oxide upgrade` to update."));
-    assert!(notice.contains(&format!("v{} → v0.8.0", env!("CARGO_PKG_VERSION"))));
-  }
 }
