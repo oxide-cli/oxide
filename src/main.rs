@@ -13,9 +13,13 @@ use oxide_cli::{
   completions,
   paths::OxidePaths,
   templates::{
-    generator::extract_template, install::install_template, loader::get_files, publish::publish,
+    generator::extract_template,
+    install::{InstallResult, install_template},
+    loader::get_files,
+    publish::publish,
     update::update,
   },
+  upgrade::{check_cli_version_cached, render_upgrade_notice, upgrade_cli},
   utils::{
     cleanup::setup_ctrlc_handler,
     validate::{is_valid_github_repo_url, validate_project_name, validate_template_name},
@@ -35,6 +39,16 @@ async fn main() -> Result<()> {
   setup_ctrlc_handler(cleanup_state.clone(), oxide_paths.templates.clone())?;
 
   let ctx = AppContext::new(oxide_paths, client, cleanup_state);
+  let skip_version_notice = matches!(&cli.command, Commands::Upgrade);
+  let version_check_handle = if skip_version_notice {
+    None
+  } else {
+    let client = ctx.client.clone();
+    let version_check_path = ctx.paths.version_check.clone();
+    Some(tokio::spawn(async move {
+      check_cli_version_cached(&client, &version_check_path).await
+    }))
+  };
 
   match cli.command {
     Commands::New {
@@ -47,7 +61,17 @@ async fn main() -> Result<()> {
     Commands::Template { command } => match command {
       TemplateCommands::Install { template_name } => {
         validate_template_name(&template_name)?;
-        install_template(&ctx, &template_name).await?;
+        let install_result = install_template(&ctx, &template_name).await?;
+        match install_result {
+          InstallResult::UpToDate => {
+            println!("{}", InstallResult::up_to_date_message(&template_name));
+          }
+          _ => {
+            if let Some(message) = install_result.message(&template_name) {
+              println!("{message}");
+            }
+          }
+        }
       }
       TemplateCommands::List => {
         get_installed_templates(&ctx.paths.templates)?;
@@ -74,7 +98,20 @@ async fn main() -> Result<()> {
     }
     Commands::Addon { command } => match command {
       AddonCommands::Install { addon_id } => {
-        addons::install::install_addon(&ctx, &addon_id).await?;
+        let install_result = addons::install::install_addon(&ctx, &addon_id).await?;
+        match &install_result {
+          addons::install::AddonInstallResult::UpToDate(_) => {
+            println!(
+              "{}",
+              addons::install::AddonInstallResult::up_to_date_message(&addon_id)
+            );
+          }
+          _ => {
+            if let Some(message) = install_result.message(&addon_id) {
+              println!("{message}");
+            }
+          }
+        }
       }
       AddonCommands::List => {
         addons::cache::get_installed_addons(&ctx.paths.addons)?;
@@ -91,6 +128,9 @@ async fn main() -> Result<()> {
         addons::update::update_addon(&ctx, &addon_url).await?;
       }
     },
+    Commands::Upgrade => {
+      upgrade_cli(&ctx).await?;
+    }
     Commands::Completions { shell } => {
       completions::install_completions(&shell)?;
     }
@@ -103,6 +143,12 @@ async fn main() -> Result<()> {
       let project_root = std::env::current_dir()?;
       addons::runner::run_addon_command(&ctx, addon_id, command_name, &project_root).await?;
     }
+  }
+
+  if let Some(version_check_handle) = version_check_handle
+    && let Ok(Ok(Some(latest_version))) = version_check_handle.await
+  {
+    println!("{}", render_upgrade_notice(&latest_version));
   }
 
   Ok(())

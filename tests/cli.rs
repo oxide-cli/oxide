@@ -154,6 +154,15 @@ fn account_help() {
   cmd().args(["account", "--help"]).assert().success();
 }
 
+#[test]
+fn upgrade_help() {
+  cmd()
+    .args(["upgrade", "--help"])
+    .assert()
+    .success()
+    .stdout(contains("latest Oxide release"));
+}
+
 // ── aliases ───────────────────────────────────────────────────────────────────
 
 #[test]

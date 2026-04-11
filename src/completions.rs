@@ -248,16 +248,16 @@ fn upsert_managed_block(
   let mut content = content.replace("\r\n", "\n");
   let block = format!("{block}\n");
 
-  if let Some(start) = content.find(start_marker) {
-    if let Some(end_rel) = content[start..].find(end_marker) {
-      let end_marker_end = start + end_rel + end_marker.len();
-      let block_end = content[end_marker_end..]
-        .find('\n')
-        .map(|idx| end_marker_end + idx + 1)
-        .unwrap_or(content.len());
-      content.replace_range(start..block_end, &block);
-      return content;
-    }
+  if let Some(start) = content.find(start_marker)
+    && let Some(end_rel) = content[start..].find(end_marker)
+  {
+    let end_marker_end = start + end_rel + end_marker.len();
+    let block_end = content[end_marker_end..]
+      .find('\n')
+      .map(|idx| end_marker_end + idx + 1)
+      .unwrap_or(content.len());
+    content.replace_range(start..block_end, &block);
+    return content;
   }
 
   if !content.is_empty() && !content.ends_with('\n') {

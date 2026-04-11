@@ -14,7 +14,7 @@ pub struct AddonsCache {
   pub addons: Vec<CachedAddon>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CachedAddon {
   pub id: String,
   pub name: String,

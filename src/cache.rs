@@ -14,7 +14,7 @@ pub struct TemplatesCache {
   pub templates: Vec<CachedTemplate>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CachedTemplate {
   pub name: String,
   pub version: String,
@@ -24,7 +24,11 @@ pub struct CachedTemplate {
   pub commit_sha: String,
 }
 
-pub fn update_templates_cache(template_path: &Path, path: &Path, commit_sha: &str) -> Result<()> {
+pub fn update_templates_cache(
+  template_path: &Path,
+  path: &Path,
+  commit_sha: &str,
+) -> Result<CachedTemplate> {
   let oxide_json = template_path.join(path).join("oxide.template.json");
   let content = fs::read_to_string(&oxide_json)?;
   let template_info: OxideTemplate = serde_json::from_str(&content)?;
@@ -46,21 +50,22 @@ pub fn update_templates_cache(template_path: &Path, path: &Path, commit_sha: &st
   templates_info
     .templates
     .retain(|t| t.name != template_info.name);
-  templates_info.templates.push(CachedTemplate {
+  let cached_template = CachedTemplate {
     name: template_info.name,
     version: template_info.version,
     source: template_info.repository.url,
     path: path.to_string_lossy().to_string(),
     official: template_info.official,
     commit_sha: commit_sha.to_string(),
-  });
+  };
+  templates_info.templates.push(cached_template.clone());
 
   fs::write(
     &templates_json,
     serde_json::to_string_pretty(&templates_info)?,
   )?;
 
-  Ok(())
+  Ok(cached_template)
 }
 
 pub fn get_cached_template(ctx: &AppContext, name: &str) -> Result<Option<CachedTemplate>> {

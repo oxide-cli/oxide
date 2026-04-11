@@ -6,6 +6,7 @@ pub mod completions;
 pub mod config;
 pub mod paths;
 pub mod templates;
+pub mod upgrade;
 pub mod utils;
 
 use std::{

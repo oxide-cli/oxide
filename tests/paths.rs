@@ -25,6 +25,16 @@ fn auth_json_is_under_home() {
 }
 
 #[test]
+fn version_check_is_under_home() {
+  let paths = OxidePaths::new().unwrap();
+  assert!(paths.version_check.starts_with(&paths.home));
+  assert_eq!(
+    paths.version_check.file_name().unwrap(),
+    "version_check.json"
+  );
+}
+
+#[test]
 fn templates_is_under_cache() {
   let paths = OxidePaths::new().unwrap();
   assert!(paths.templates.starts_with(&paths.cache));
@@ -51,6 +61,7 @@ fn ensure_directories_creates_cache_dir() {
   let paths = OxidePaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
+    version_check: dir.path().join("version_check.json"),
     cache: dir.path().join("cache"),
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
@@ -73,6 +84,7 @@ fn ensure_directories_creates_templates_dir() {
   let paths = OxidePaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
+    version_check: dir.path().join("version_check.json"),
     cache: dir.path().join("cache"),
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
@@ -95,6 +107,7 @@ fn ensure_directories_creates_addons_dir() {
   let paths = OxidePaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
+    version_check: dir.path().join("version_check.json"),
     cache: dir.path().join("cache"),
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),
@@ -117,6 +130,7 @@ fn ensure_directories_is_idempotent() {
   let paths = OxidePaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
+    version_check: dir.path().join("version_check.json"),
     cache: dir.path().join("cache"),
     templates: dir.path().join("cache").join("templates"),
     auth: dir.path().join("auth.json"),

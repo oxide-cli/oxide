@@ -5,6 +5,7 @@ use anyhow::Result;
 pub struct OxidePaths {
   pub home: PathBuf,
   pub config: PathBuf,
+  pub version_check: PathBuf,
   pub cache: PathBuf,
   pub templates: PathBuf,
   pub auth: PathBuf,
@@ -22,6 +23,7 @@ impl OxidePaths {
     Ok(Self {
       home: oxide_home.clone(),
       config: oxide_home.join("config.json"),
+      version_check: oxide_home.join("version_check.json"),
       cache: oxide_home.join("cache"),
       templates: oxide_home.join("cache").join("templates"),
       auth: oxide_home.join("auth.json"),

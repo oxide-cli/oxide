@@ -37,6 +37,13 @@ fn is_command_executed_false_when_no_entry() {
 }
 
 #[test]
+fn addon_version_returns_current_version_when_entry_exists() {
+  let mut lock = LockFile::default();
+  lock.upsert_entry(sample_entry("drizzle"));
+  assert_eq!(lock.addon_version("drizzle"), Some("1.0.0"));
+}
+
+#[test]
 fn mark_command_executed_adds_once() {
   let mut lock = LockFile::default();
   lock.upsert_entry(sample_entry("drizzle"));

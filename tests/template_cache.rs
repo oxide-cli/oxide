@@ -12,6 +12,7 @@ fn make_test_ctx(templates_dir: &std::path::Path) -> AppContext {
   let paths = OxidePaths {
     home: templates_dir.to_path_buf(),
     config: templates_dir.join("config.json"),
+    version_check: templates_dir.join("version_check.json"),
     cache: templates_dir.join("cache"),
     templates: templates_dir.to_path_buf(),
     auth: templates_dir.join("auth.json"),

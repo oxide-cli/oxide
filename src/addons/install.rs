@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{AppContext, auth::token::get_auth_user, utils::archive::download_and_extract};
 
 use super::{
-  cache::{get_cached_addon, update_addons_cache},
+  cache::{CachedAddon, get_cached_addon, update_addons_cache},
   manifest::AddonManifest,
 };
 
@@ -14,6 +14,73 @@ use super::{
 struct AddonUrlResponse {
   archive_url: String,
   commit_sha: String,
+}
+
+#[derive(Debug)]
+pub enum AddonInstallResult {
+  Installed(AddonManifest),
+  Updated(AddonManifest),
+  UpToDate(AddonManifest),
+}
+
+impl AddonInstallResult {
+  pub fn into_manifest(self) -> AddonManifest {
+    match self {
+      Self::Installed(manifest) | Self::Updated(manifest) | Self::UpToDate(manifest) => manifest,
+    }
+  }
+
+  pub fn message(&self, addon_id: &str) -> Option<String> {
+    match self {
+      Self::Installed(_) => Some(format!("Addon '{addon_id}' successfully downloaded")),
+      Self::Updated(manifest) => Some(format!(
+        "Addon '{addon_id}' updated to v{}",
+        manifest.version
+      )),
+      Self::UpToDate(_) => None,
+    }
+  }
+
+  pub fn update_message(&self, addon_id: &str) -> Option<String> {
+    match self {
+      Self::Updated(manifest) => Some(format!(
+        "Addon '{addon_id}' updated to v{}",
+        manifest.version
+      )),
+      Self::Installed(_) | Self::UpToDate(_) => None,
+    }
+  }
+
+  pub fn up_to_date_message(addon_id: &str) -> String {
+    format!("Addon '{addon_id}' is already up to date")
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InstallState {
+  Install,
+  Update,
+  UpToDate,
+}
+
+fn classify_install_state(
+  cached_addon: Option<&CachedAddon>,
+  addon_dir_exists: bool,
+  latest_commit_sha: &str,
+) -> InstallState {
+  let Some(cached_addon) = cached_addon else {
+    return InstallState::Install;
+  };
+
+  if !addon_dir_exists {
+    return InstallState::Install;
+  }
+
+  if cached_addon.commit_sha == latest_commit_sha {
+    InstallState::UpToDate
+  } else {
+    InstallState::Update
+  }
 }
 
 async fn get_addon_url(ctx: &AppContext, addon_id: &str) -> Result<AddonUrlResponse> {
@@ -36,35 +103,22 @@ async fn get_addon_url(ctx: &AppContext, addon_id: &str) -> Result<AddonUrlRespo
   Ok(res)
 }
 
-pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonManifest> {
+pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonInstallResult> {
   let info = get_addon_url(ctx, addon_id).await?;
 
   // The archive already contains a top-level `{addon_id}/` directory,
   // so we extract into the addons root — files land at addons/{addon_id}/...
   let addons_dir = &ctx.paths.addons;
   let addon_dir = addons_dir.join(addon_id);
+  let cached_addon = get_cached_addon(addons_dir, addon_id)
+    .with_context(|| format!("Failed to read addons cache while checking '{addon_id}'"))?;
+  let install_state =
+    classify_install_state(cached_addon.as_ref(), addon_dir.exists(), &info.commit_sha);
 
-  // Skip download if cached commit matches and addon dir exists
-  if let Some(cached) = get_cached_addon(addons_dir, addon_id)
-    .with_context(|| format!("Failed to read addons cache while checking '{addon_id}'"))?
-    && cached.commit_sha == info.commit_sha
-    && addon_dir.exists()
-  {
-    let manifest_path = addon_dir.join("oxide.addon.json");
-    let content = std::fs::read_to_string(&manifest_path).with_context(|| {
-      format!(
-        "Failed to read cached manifest at {}",
-        manifest_path.display()
-      )
-    })?;
-    let manifest: AddonManifest = serde_json::from_str(&content).with_context(|| {
-      format!(
-        "Failed to parse cached manifest at {}",
-        manifest_path.display()
-      )
-    })?;
-    println!("Addon '{}' is already up to date", addon_id);
-    return Ok(manifest);
+  if install_state == InstallState::UpToDate {
+    return Ok(AddonInstallResult::UpToDate(read_cached_manifest(
+      addons_dir, addon_id,
+    )?));
   }
 
   {
@@ -72,19 +126,21 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonMani
     *guard = Some(addon_dir.clone());
   }
 
-  download_and_extract(&ctx.client, &info.archive_url, addons_dir, None)
+  let download_result = download_and_extract(&ctx.client, &info.archive_url, addons_dir, None)
     .await
     .with_context(|| {
       format!(
         "Failed to download and extract addon '{addon_id}' from {}",
         info.archive_url
       )
-    })?;
+    });
 
   {
     let mut guard = ctx.cleanup_state.lock().unwrap_or_else(|e| e.into_inner());
     *guard = None;
   }
+
+  download_result?;
 
   let manifest_path = addon_dir.join("oxide.addon.json");
   let content = std::fs::read_to_string(&manifest_path).with_context(|| {
@@ -101,9 +157,11 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonMani
   update_addons_cache(addons_dir, addon_id, &manifest, &info.commit_sha)
     .with_context(|| format!("Failed to update addons cache after installing '{addon_id}'"))?;
 
-  println!("Addon '{}' successfully downloaded", addon_id);
-
-  Ok(manifest)
+  Ok(match install_state {
+    InstallState::Install => AddonInstallResult::Installed(manifest),
+    InstallState::Update => AddonInstallResult::Updated(manifest),
+    InstallState::UpToDate => unreachable!("up-to-date addons should return early"),
+  })
 }
 
 pub fn read_cached_manifest(addons_dir: &Path, addon_id: &str) -> Result<AddonManifest> {
@@ -116,4 +174,78 @@ pub fn read_cached_manifest(addons_dir: &Path, addon_id: &str) -> Result<AddonMa
   })?;
   serde_json::from_str(&content)
     .with_context(|| format!("Failed to parse manifest for addon '{addon_id}'"))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{AddonInstallResult, InstallState, classify_install_state};
+  use crate::addons::{cache::CachedAddon, manifest::AddonManifest};
+
+  fn cached_addon(commit_sha: &str) -> CachedAddon {
+    CachedAddon {
+      id: "drizzle".to_string(),
+      name: "Drizzle".to_string(),
+      version: "1.0.0".to_string(),
+      path: "drizzle".to_string(),
+      commit_sha: commit_sha.to_string(),
+      repo_url: String::new(),
+    }
+  }
+
+  fn manifest(version: &str) -> AddonManifest {
+    AddonManifest {
+      schema_version: "1".to_string(),
+      id: "drizzle".to_string(),
+      name: "Drizzle".to_string(),
+      version: version.to_string(),
+      description: "test addon".to_string(),
+      author: "test".to_string(),
+      requires: Vec::new(),
+      inputs: Vec::new(),
+      detect: Vec::new(),
+      variants: Vec::new(),
+    }
+  }
+
+  #[test]
+  fn classify_install_state_returns_install_when_addon_is_not_cached() {
+    let install_state = classify_install_state(None, true, "sha-1");
+    assert_eq!(install_state, InstallState::Install);
+  }
+
+  #[test]
+  fn classify_install_state_returns_install_when_addon_directory_is_missing() {
+    let cached_addon = cached_addon("sha-1");
+    let install_state = classify_install_state(Some(&cached_addon), false, "sha-1");
+    assert_eq!(install_state, InstallState::Install);
+  }
+
+  #[test]
+  fn classify_install_state_returns_up_to_date_when_commit_matches() {
+    let cached_addon = cached_addon("sha-1");
+    let install_state = classify_install_state(Some(&cached_addon), true, "sha-1");
+    assert_eq!(install_state, InstallState::UpToDate);
+  }
+
+  #[test]
+  fn classify_install_state_returns_update_when_commit_differs() {
+    let cached_addon = cached_addon("sha-1");
+    let install_state = classify_install_state(Some(&cached_addon), true, "sha-2");
+    assert_eq!(install_state, InstallState::Update);
+  }
+
+  #[test]
+  fn addon_install_result_update_message_uses_new_version() {
+    let message = AddonInstallResult::Updated(manifest("1.2.3")).update_message("drizzle");
+    assert_eq!(
+      message.as_deref(),
+      Some("Addon 'drizzle' updated to v1.2.3")
+    );
+  }
+
+  #[test]
+  fn addon_install_result_message_is_silent_for_up_to_date_addons() {
+    let message = AddonInstallResult::UpToDate(manifest("1.2.3")).message("drizzle");
+    assert!(message.is_none());
+  }
 }

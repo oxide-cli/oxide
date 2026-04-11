@@ -45,6 +45,14 @@ impl LockFile {
       .unwrap_or(false)
   }
 
+  pub fn addon_version(&self, addon_id: &str) -> Option<&str> {
+    self
+      .addons
+      .iter()
+      .find(|e| e.id == addon_id)
+      .map(|entry| entry.version.as_str())
+  }
+
   pub fn mark_command_executed(&mut self, addon_id: &str, command: &str) {
     if let Some(entry) = self.addons.iter_mut().find(|e| e.id == addon_id)
       && !entry.commands_executed.iter().any(|c| c == command)

@@ -92,6 +92,9 @@ pub enum Commands {
     command: AddonCommands,
   },
 
+  #[command(about = "Download and install the latest Oxide release")]
+  Upgrade,
+
   #[command(about = "Install shell completions for: bash, zsh, fish, powershell")]
   Completions {
     #[arg(

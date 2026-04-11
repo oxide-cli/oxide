@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use anyhow::{Result, anyhow};
 use inquire::{Confirm, Select, Text};
+use reqwest::StatusCode;
 
 use crate::{
   AppContext,
@@ -11,7 +12,7 @@ use crate::{
 use super::{
   cache::{get_cached_addon, is_addon_installed},
   detect::detect_variant,
-  install::{install_addon, read_cached_manifest},
+  install::{AddonInstallResult, install_addon, read_cached_manifest},
   lock::{LockEntry, LockFile},
   manifest::{AddonManifest, InputDef, InputType},
   steps::{
@@ -29,11 +30,22 @@ pub async fn run_addon_command(
   project_root: &Path,
 ) -> Result<()> {
   // 1. Load manifest
-  let manifest: AddonManifest = if get_cached_addon(&ctx.paths.addons, addon_id)?.is_some() {
-    read_cached_manifest(&ctx.paths.addons, addon_id)?
-  } else {
-    install_addon(ctx, addon_id).await?
+  let addon_is_cached = get_cached_addon(&ctx.paths.addons, addon_id)?.is_some();
+  let install_result = match install_addon(ctx, addon_id).await {
+    Ok(install_result) => install_result,
+    Err(err) if addon_is_cached && should_fallback_to_cached_manifest(&err) => {
+      eprintln!(
+        "Note: Could not check for addon updates ({}). Using cached version.",
+        err
+      );
+      AddonInstallResult::UpToDate(read_cached_manifest(&ctx.paths.addons, addon_id)?)
+    }
+    Err(err) => return Err(err),
   };
+  if let Some(message) = install_result.update_message(addon_id) {
+    println!("{message}");
+  }
+  let manifest: AddonManifest = install_result.into_manifest();
 
   // 2. Load lock file
   let mut lock = LockFile::load(project_root)?;
@@ -87,11 +99,23 @@ pub async fn run_addon_command(
 
   // 3. Check `once` (now that we have the command)
   if command.once && lock.is_command_executed(addon_id, command_name) {
-    println!(
-      "Command '{}' has already been executed, skipping.",
-      command_name
-    );
-    return Ok(());
+    if let Some(prompt_message) = rerun_prompt_message(
+      command_name,
+      lock.addon_version(addon_id),
+      &manifest.version,
+    ) {
+      let rerun = Confirm::new(&prompt_message).with_default(false).prompt()?;
+      if !rerun {
+        println!("Skipping command '{}'.", command_name);
+        return Ok(());
+      }
+    } else {
+      println!(
+        "Command '{}' has already been executed, skipping.",
+        command_name
+      );
+      return Ok(());
+    }
   }
 
   // 4b. Check `requires_commands`
@@ -173,6 +197,40 @@ pub async fn run_addon_command(
   Ok(())
 }
 
+fn should_fallback_to_cached_manifest(error: &anyhow::Error) -> bool {
+  if error.to_string() == "You are not logged in yet." {
+    return true;
+  }
+
+  error.chain().any(|source| {
+    source
+      .downcast_ref::<reqwest::Error>()
+      .is_some_and(|reqwest_error| {
+        reqwest_error.is_connect()
+          || reqwest_error.is_timeout()
+          || reqwest_error.status().is_some_and(|status| {
+            matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN)
+          })
+      })
+  })
+}
+
+fn rerun_prompt_message(
+  command_name: &str,
+  locked_version: Option<&str>,
+  current_version: &str,
+) -> Option<String> {
+  let locked_version = locked_version.filter(|version| !version.is_empty())?;
+  if locked_version == current_version {
+    return None;
+  }
+
+  Some(format!(
+    "Command '{}' was last run with v{} of this add-on. A new version (v{}) is available. Re-run it now?",
+    command_name, locked_version, current_version
+  ))
+}
+
 /// Prompts for a list of inputs and inserts results into `map`.
 fn collect_inputs(inputs: &[InputDef], map: &mut HashMap<String, String>) -> Result<()> {
   for input in inputs {
@@ -209,10 +267,10 @@ fn collect_inputs(inputs: &[InputDef], map: &mut HashMap<String, String>) -> Res
 fn insert_with_derived(ctx: &mut tera::Context, map: &HashMap<String, String>) {
   for (k, v) in map {
     ctx.insert(k.as_str(), v);
-    ctx.insert(&format!("{k}_pascal"), &to_pascal_case(v));
-    ctx.insert(&format!("{k}_camel"), &to_camel_case(v));
-    ctx.insert(&format!("{k}_kebab"), &to_kebab_case(v));
-    ctx.insert(&format!("{k}_snake"), &to_snake_case(v));
+    ctx.insert(format!("{k}_pascal"), &to_pascal_case(v));
+    ctx.insert(format!("{k}_camel"), &to_camel_case(v));
+    ctx.insert(format!("{k}_kebab"), &to_kebab_case(v));
+    ctx.insert(format!("{k}_snake"), &to_snake_case(v));
   }
 }
 
@@ -229,4 +287,39 @@ fn apply_rollback(rollback: Rollback) -> Result<()> {
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::should_fallback_to_cached_manifest;
+  use anyhow::anyhow;
+
+  #[test]
+  fn fallback_to_cached_manifest_when_user_is_not_logged_in() {
+    let error = anyhow!("You are not logged in yet.");
+    assert!(should_fallback_to_cached_manifest(&error));
+  }
+
+  #[test]
+  fn do_not_fallback_to_cached_manifest_for_unrelated_errors() {
+    let error = anyhow!("oxide.addon.json is malformed");
+    assert!(!should_fallback_to_cached_manifest(&error));
+  }
+
+  #[test]
+  fn rerun_prompt_message_is_none_when_versions_match() {
+    let prompt = super::rerun_prompt_message("install", Some("1.0.0"), "1.0.0");
+    assert!(prompt.is_none());
+  }
+
+  #[test]
+  fn rerun_prompt_message_mentions_both_versions_when_version_changed() {
+    let prompt = super::rerun_prompt_message("install", Some("1.0.0"), "1.1.0");
+    assert_eq!(
+      prompt.as_deref(),
+      Some(
+        "Command 'install' was last run with v1.0.0 of this add-on. A new version (v1.1.0) is available. Re-run it now?"
+      )
+    );
+  }
 }
