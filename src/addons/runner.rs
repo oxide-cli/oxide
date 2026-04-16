@@ -7,6 +7,7 @@ use reqwest::StatusCode;
 use crate::{
   AppContext,
   templates::generator::{to_camel_case, to_kebab_case, to_pascal_case, to_snake_case},
+  utils::errors::OxideError,
 };
 
 use super::{
@@ -122,12 +123,11 @@ pub async fn run_addon_command(
   for req_cmd in &command.requires_commands {
     if !lock.is_command_executed(addon_id, req_cmd) {
       return Err(anyhow!(
-        "Command '{}' requires '{}' to be run first. Run: oxide addon run {} {} {}",
+        "Command '{}' requires '{}' to be run first. Run: oxide use {} {}",
         command_name,
         req_cmd,
         addon_id,
-        req_cmd,
-        project_root.display()
+        req_cmd
       ));
     }
   }
@@ -198,7 +198,10 @@ pub async fn run_addon_command(
 }
 
 fn should_fallback_to_cached_manifest(error: &anyhow::Error) -> bool {
-  if error.to_string() == "You are not logged in yet." {
+  if error.chain().any(|e| {
+    e.downcast_ref::<OxideError>()
+      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn | OxideError::HttpUnauthorized))
+  }) {
     return true;
   }
 

@@ -3,7 +3,11 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
-use crate::{AppContext, auth::token::get_auth_user, utils::archive::download_and_extract};
+use crate::{
+  AppContext,
+  auth::token::get_auth_user,
+  utils::{archive::download_and_extract, errors::classify_reqwest_error},
+};
 
 use super::{
   cache::{CachedAddon, get_cached_addon, update_addons_cache},
@@ -99,16 +103,21 @@ pub fn classify_install_state_for_tests(
 async fn get_addon_url(ctx: &AppContext, addon_id: &str) -> Result<AddonUrlResponse> {
   let user = get_auth_user(&ctx.paths.auth)?;
 
-  let res: AddonUrlResponse = ctx
+  let response = ctx
     .client
     .get(format!("{}/addon/{addon_id}/url", ctx.backend_url))
     .bearer_auth(user.token)
     .header("Content-Type", "application/json")
     .send()
     .await
-    .with_context(|| format!("Failed to fetch download URL for addon '{addon_id}'"))?
-    .error_for_status()
-    .with_context(|| format!("Server returned error for addon '{addon_id}'"))?
+    .with_context(|| format!("Failed to fetch download URL for addon '{addon_id}'"))?;
+
+  if !response.status().is_success() {
+    let err = response.error_for_status().unwrap_err();
+    return Err(classify_reqwest_error(err, &format!("addon '{addon_id}'")));
+  }
+
+  let res: AddonUrlResponse = response
     .json()
     .await
     .with_context(|| format!("Failed to parse URL response for addon '{addon_id}'"))?;

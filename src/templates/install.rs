@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -8,7 +8,7 @@ use crate::{
   AppContext,
   auth::token::get_auth_user,
   cache::{CachedTemplate, get_cached_template, update_templates_cache},
-  utils::archive::download_and_extract,
+  utils::{archive::download_and_extract, errors::classify_reqwest_error},
 };
 
 #[derive(Deserialize)]
@@ -91,15 +91,23 @@ async fn get_template_info(
 ) -> Result<TemplateInfoRes> {
   let user = get_auth_user(auth_path)?;
 
-  let res: TemplateInfoRes = client
+  let response = client
     .get(format!("{backend_url}/template/{template_name}/url"))
     .bearer_auth(user.token)
     .header("Content-Type", "application/json")
     .send()
-    .await?
-    .error_for_status()?
+    .await
+    .with_context(|| format!("Failed to connect to server for template '{template_name}'"))?;
+
+  if !response.status().is_success() {
+    let err = response.error_for_status().unwrap_err();
+    return Err(classify_reqwest_error(err, &format!("template '{template_name}'")));
+  }
+
+  let res: TemplateInfoRes = response
     .json()
-    .await?;
+    .await
+    .with_context(|| format!("Failed to parse response for template '{template_name}'"))?;
 
   Ok(res)
 }

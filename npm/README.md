@@ -81,7 +81,8 @@ oxide logout
 oxide account
 oxide addon <COMMAND>
 oxide upgrade
-oxide <ADDON_ID> <COMMAND>
+oxide completions <SHELL>
+oxide use <ADDON_ID> <COMMAND>
 ```
 
 Template management:
@@ -107,7 +108,7 @@ oxide addon update <GITHUB_REPOSITORY_URL>
 Addon execution:
 
 ```text
-oxide <ADDON_ID> <COMMAND>
+oxide use <ADDON_ID> <COMMAND>
 ```
 
 Example:
@@ -115,7 +116,7 @@ Example:
 ```bash
 oxide addon install drizzle
 cd my-app
-oxide drizzle init
+oxide use drizzle init
 ```
 
 Upgrade Oxide itself:
@@ -123,6 +124,14 @@ Upgrade Oxide itself:
 ```bash
 oxide upgrade
 ```
+
+Install shell completions:
+
+```bash
+oxide completions zsh
+```
+
+Supported shells are `bash`, `zsh`, `fish`, and `powershell`.
 
 Aliases:
 
@@ -178,7 +187,13 @@ Install an addon:
 oxide addon install drizzle
 ```
 
-When you run an addon command such as `oxide drizzle init`, Oxide checks for a newer cached addon version first. If the add-on updated and the command is marked `once: true`, Oxide prompts you to re-run it.
+Run an installed addon command:
+
+```bash
+oxide use drizzle init
+```
+
+When you run an addon command such as `oxide use drizzle init`, Oxide checks for a newer cached addon version first. If the add-on updated and the command is marked `once: true`, Oxide prompts you to re-run it.
 
 List installed addons:
 
@@ -211,6 +226,14 @@ oxide upgrade
 ```
 
 After most commands, Oxide performs a background version check and prints a short upgrade notice when a newer CLI release is available.
+
+Install shell completions:
+
+```bash
+oxide completions zsh
+```
+
+Supported shells are `bash`, `zsh`, `fish`, and `powershell`.
 
 ## Local data and generated files
 

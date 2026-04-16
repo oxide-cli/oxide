@@ -1,11 +1,12 @@
 use anyhow::anyhow;
-use oxide_cli::addons::runner::{
-  rerun_prompt_message_for_tests, should_fallback_to_cached_manifest_for_tests,
+use oxide_cli::{
+  addons::runner::{rerun_prompt_message_for_tests, should_fallback_to_cached_manifest_for_tests},
+  utils::errors::OxideError,
 };
 
 #[test]
 fn fallback_to_cached_manifest_when_user_is_not_logged_in() {
-  let error = anyhow!("You are not logged in yet.");
+  let error = anyhow::Error::from(OxideError::NotLoggedIn);
   assert!(should_fallback_to_cached_manifest_for_tests(&error));
 }
 

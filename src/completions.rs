@@ -1,50 +1,322 @@
 use std::{
-  collections::HashSet,
+  collections::BTreeMap,
   fs,
   io::ErrorKind,
   path::{Path, PathBuf},
+  process::Command as ProcessCommand,
 };
 
 use anyhow::{Context, Result};
-use colored::Colorize;
+use clap::{Command, ValueEnum};
+use clap_complete::{
+  engine::{ArgValueCandidates, CompletionCandidate},
+  env::CompleteEnv,
+};
 
-use crate::addons::{cache::AddonsCache, manifest::AddonManifest};
+use crate::{
+  addons::{cache::AddonsCache, manifest::AddonManifest},
+  cache::TemplatesCache,
+  cli,
+  paths::OxidePaths,
+};
 
-/// Install the shell completion script to the appropriate location automatically.
-pub fn install_completions(shell: &str) -> Result<()> {
-  match shell {
-    "bash" => install_bash(),
-    "zsh" => install_zsh(),
-    "fish" => install_fish(),
-    "powershell" => install_powershell(),
-    other => {
-      eprintln!("Unsupported shell '{other}'. Supported: bash, zsh, fish, powershell");
-      Ok(())
+const COMPLETE_ENV_VAR: &str = "COMPLETE";
+const INSTALLED_TEMPLATE_HELP: &str = "Installed template";
+const INSTALLED_ADDON_HELP: &str = "Installed addon";
+const INSTALLED_ADDON_COMMAND_HELP: &str = "Installed addon command";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum CompletionShell {
+  Bash,
+  Zsh,
+  Fish,
+  #[value(name = "powershell")]
+  PowerShell,
+}
+
+impl CompletionShell {
+  fn env_name(self) -> &'static str {
+    match self {
+      Self::Bash => "bash",
+      Self::Zsh => "zsh",
+      Self::Fish => "fish",
+      Self::PowerShell => "powershell",
     }
   }
 }
 
-fn install_bash() -> Result<()> {
-  // ~/.local/share/bash-completion/completions/ is the standard user-level location
-  // that bash-completion picks up automatically — no .bashrc changes needed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct InstalledAddonCompletion {
+  id: String,
+  name: String,
+  version: String,
+  commands: Vec<InstalledAddonCommand>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct InstalledAddonCommand {
+  name: String,
+  description: String,
+}
+
+pub fn complete_env() {
+  CompleteEnv::with_factory(command)
+    .var(COMPLETE_ENV_VAR)
+    .complete();
+}
+
+pub fn install_completions(shell: CompletionShell) -> Result<()> {
+  let script = generate_completion_script(shell)?;
+
+  match shell {
+    CompletionShell::Bash => install_bash(&script),
+    CompletionShell::Zsh => install_zsh(&script),
+    CompletionShell::Fish => install_fish(&script),
+    CompletionShell::PowerShell => install_powershell(&script),
+  }
+}
+
+pub fn command() -> Command {
+  let paths = OxidePaths::new().ok();
+  command_for_paths(
+    paths.as_ref().map(|p| p.templates.as_path()),
+    paths.as_ref().map(|p| p.addons.as_path()),
+  )
+}
+
+pub fn command_for_paths(templates_dir: Option<&Path>, addons_dir: Option<&Path>) -> Command {
+  let mut cmd = cli::command()
+    .mut_subcommand("new", {
+      let templates_dir = templates_dir.map(PathBuf::from);
+      move |subcommand| {
+        subcommand.mut_arg("template_name", {
+          let templates_dir = templates_dir.clone();
+          move |arg| {
+            arg.add(ArgValueCandidates::new(move || {
+              template_candidates(templates_dir.as_deref())
+            }))
+          }
+        })
+      }
+    })
+    .mut_subcommand("template", {
+      let templates_dir = templates_dir.map(PathBuf::from);
+      move |subcommand| {
+        subcommand.mut_subcommand("remove", {
+          let templates_dir = templates_dir.clone();
+          move |remove| {
+            remove.mut_arg("template_name", {
+              let templates_dir = templates_dir.clone();
+              move |arg| {
+                arg.add(ArgValueCandidates::new(move || {
+                  template_candidates(templates_dir.as_deref())
+                }))
+              }
+            })
+          }
+        })
+      }
+    })
+    .mut_subcommand("addon", {
+      let addons_dir = addons_dir.map(PathBuf::from);
+      move |subcommand| {
+        subcommand.mut_subcommand("remove", {
+          let addons_dir = addons_dir.clone();
+          move |remove| {
+            remove.mut_arg("addon_id", {
+              let addons_dir = addons_dir.clone();
+              move |arg| {
+                arg.add(ArgValueCandidates::new(move || {
+                  addon_candidates(addons_dir.as_deref())
+                }))
+              }
+            })
+          }
+        })
+      }
+    });
+
+  if let Some(addons_dir) = addons_dir {
+    let addons = installed_addons(addons_dir);
+    if !addons.is_empty() {
+      cmd = cmd.mut_subcommand("use", |use_cmd| {
+        let mut use_cmd = use_cmd;
+        for addon in addons {
+          if use_cmd.find_subcommand(&addon.id).is_none() {
+            use_cmd = use_cmd.subcommand(addon_subcommand(addon));
+          }
+        }
+        use_cmd
+      });
+    }
+  }
+
+  cmd
+}
+
+fn addon_subcommand(addon: InstalledAddonCompletion) -> Command {
+  let InstalledAddonCompletion {
+    id,
+    name,
+    version,
+    commands,
+  } = addon;
+
+  let mut subcommand =
+    Command::new(id).about(format!("{INSTALLED_ADDON_HELP}: {name} v{version}"));
+
+  for command in commands {
+    let InstalledAddonCommand { name, description } = command;
+    let mut addon_command = Command::new(name);
+
+    addon_command = if description.is_empty() {
+      addon_command.about(INSTALLED_ADDON_COMMAND_HELP)
+    } else {
+      addon_command.about(description)
+    };
+
+    subcommand = subcommand.subcommand(addon_command);
+  }
+
+  subcommand
+}
+
+pub fn template_candidates(templates_dir: Option<&Path>) -> Vec<CompletionCandidate> {
+  installed_template_names(templates_dir)
+    .into_iter()
+    .map(|name| CompletionCandidate::new(name).help(Some(INSTALLED_TEMPLATE_HELP.into())))
+    .collect()
+}
+
+pub fn addon_candidates(addons_dir: Option<&Path>) -> Vec<CompletionCandidate> {
+  let Some(addons_dir) = addons_dir else {
+    return Vec::new();
+  };
+
+  installed_addons(addons_dir)
+    .into_iter()
+    .map(|addon| {
+      CompletionCandidate::new(addon.id).help(Some(
+        format!("{INSTALLED_ADDON_HELP}: {} v{}", addon.name, addon.version).into(),
+      ))
+    })
+    .collect()
+}
+
+fn installed_template_names(templates_dir: Option<&Path>) -> Vec<String> {
+  let Some(templates_dir) = templates_dir else {
+    return Vec::new();
+  };
+
+  let index = templates_dir.join("oxide-templates.json");
+  let Ok(content) = fs::read_to_string(&index) else {
+    return Vec::new();
+  };
+  let Ok(cache) = serde_json::from_str::<TemplatesCache>(&content) else {
+    return Vec::new();
+  };
+
+  let mut names: Vec<String> = cache
+    .templates
+    .into_iter()
+    .map(|template| template.name)
+    .collect();
+  names.sort();
+  names.dedup();
+  names
+}
+
+fn installed_addons(addons_dir: &Path) -> Vec<InstalledAddonCompletion> {
+  let index = addons_dir.join("oxide-addons.json");
+  let Ok(content) = fs::read_to_string(&index) else {
+    return Vec::new();
+  };
+  let Ok(cache) = serde_json::from_str::<AddonsCache>(&content) else {
+    return Vec::new();
+  };
+
+  let mut addons: Vec<InstalledAddonCompletion> = cache
+    .addons
+    .into_iter()
+    .map(|addon| InstalledAddonCompletion {
+      id: addon.id,
+      name: addon.name,
+      version: addon.version,
+      commands: addon_commands(addons_dir, &addon.path),
+    })
+    .collect();
+  addons.sort_by(|a, b| a.id.cmp(&b.id));
+  addons
+}
+
+fn addon_commands(addons_dir: &Path, addon_path: &str) -> Vec<InstalledAddonCommand> {
+  let manifest_path = addons_dir.join(addon_path).join("oxide.addon.json");
+  let Ok(content) = fs::read_to_string(&manifest_path) else {
+    return Vec::new();
+  };
+  let Ok(manifest) = serde_json::from_str::<AddonManifest>(&content) else {
+    return Vec::new();
+  };
+
+  let mut commands: BTreeMap<String, String> = BTreeMap::new();
+
+  for variant in manifest.variants {
+    for command in variant.commands {
+      commands
+        .entry(command.name)
+        .and_modify(|description| {
+          if description.is_empty() && !command.description.is_empty() {
+            *description = command.description.clone();
+          }
+        })
+        .or_insert(command.description);
+    }
+  }
+
+  commands
+    .into_iter()
+    .map(|(name, description)| InstalledAddonCommand { name, description })
+    .collect()
+}
+
+fn generate_completion_script(shell: CompletionShell) -> Result<String> {
+  let current_exe = std::env::current_exe().context("Could not determine path to executable")?;
+  let output = ProcessCommand::new(&current_exe)
+    .env(COMPLETE_ENV_VAR, shell.env_name())
+    .output()
+    .with_context(|| {
+      format!(
+        "Could not generate {} completions via {}",
+        shell.env_name(),
+        current_exe.display()
+      )
+    })?;
+
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    return Err(anyhow::anyhow!(
+      "Completion script generation for {} failed: {}",
+      shell.env_name(),
+      stderr.trim()
+    ));
+  }
+
+  String::from_utf8(output.stdout).context("Generated completion script is not valid UTF-8")
+}
+
+// ── Bash ─────────────────────────────────────────────────────────────────────
+
+fn install_bash(script: &str) -> Result<()> {
   let dir = bash_completions_dir()?;
   fs::create_dir_all(&dir)
-    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+    .with_context(|| format!("Could not create directory {}", dir.display()))?;
   let dest = dir.join("oxide");
-  fs::write(&dest, BASH_SCRIPT).with_context(|| format!("Failed to write {}", dest.display()))?;
-
+  write_completion_script(&dest, script)?;
+  println!("Written to {}", dest.display());
   println!(
-    "{} Bash completions installed to {}",
-    "✔".green(),
-    dest.display()
-  );
-  println!(
-    "  Open a new terminal, or run: {}",
-    format!("source {}", dest.display()).cyan()
-  );
-  println!(
-    "  Note: requires the {} package to be installed.",
-    "bash-completion".cyan()
+    "\nTo activate, add this to your ~/.bashrc (if not already present):\n\
+     \n  source ~/.local/share/bash-completion/completions/oxide\n\
+     \nThen restart your shell or run:  source ~/.bashrc"
   );
   Ok(())
 }
@@ -54,53 +326,99 @@ fn bash_completions_dir() -> Result<PathBuf> {
   Ok(home.join(".local/share/bash-completion/completions"))
 }
 
-fn install_zsh() -> Result<()> {
-  // If the user has a $ZDOTDIR/completions/ directory (e.g. HyDE), write a
-  // directly-sourceable script there — no fpath changes needed.
-  // Otherwise fall back to the standard ~/.zfunc/_oxide fpath approach.
+// ── Zsh ──────────────────────────────────────────────────────────────────────
+
+fn install_zsh(script: &str) -> Result<()> {
   if let Some(dir) = zdotdir_completions_dir() {
+    // HyDE: completions directory is already in fpath — just drop the file
     fs::create_dir_all(&dir)
-      .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+      .with_context(|| format!("Could not create directory {}", dir.display()))?;
     let dest = dir.join("oxide.zsh");
-    fs::write(&dest, ZSH_SOURCED_SCRIPT)
-      .with_context(|| format!("Failed to write {}", dest.display()))?;
-    println!(
-      "{} Zsh completions installed to {}",
-      "✔".green(),
-      dest.display()
-    );
-    println!("  Restart your terminal or open a new tab — completions are active immediately.");
+    write_completion_script(&dest, script)?;
+    println!("Written to {}", dest.display());
+    println!("\nRestart your shell to activate completions.");
   } else {
+    // Default: write to ~/.zfunc/_oxide and patch the zsh config file
     let dir = home_zfunc_dir()?;
     fs::create_dir_all(&dir)
-      .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+      .with_context(|| format!("Could not create directory {}", dir.display()))?;
     let dest = dir.join("_oxide");
-    fs::write(&dest, ZSH_FPATH_SCRIPT)
-      .with_context(|| format!("Failed to write {}", dest.display()))?;
-    println!(
-      "{} Zsh completions installed to {}",
-      "✔".green(),
-      dest.display()
-    );
-    println!("  Ensure your ~/.zshrc contains:");
-    println!("    {}", "fpath=(~/.zfunc $fpath)".cyan());
-    println!("    {}", "autoload -Uz compinit && compinit".cyan());
+    write_completion_script(&dest, script)?;
+
+    let config = zsh_config_file()?;
+    upsert_zsh_config(&config, &dir)?;
+
+    println!("Written to {}", dest.display());
+    println!("Updated {}", config.display());
+    println!("\nRestart your shell or run:  source {}", config.display());
   }
   Ok(())
 }
 
-/// Returns `$ZDOTDIR/completions/` only when it looks like a HyDE setup:
-/// the directory exists AND `$ZDOTDIR/.hyde.zshrc` or `hyde-cli` is present.
+/// Returns the zsh config file to patch.
+///
+/// Preference order:
+/// 1. `$ZDOTDIR/.zshrc`   — non-default ZDOTDIR
+/// 2. `~/.zshrc`          — standard location (created if absent)
+fn zsh_config_file() -> Result<PathBuf> {
+  if let Ok(zdotdir) = std::env::var("ZDOTDIR") {
+    let path = PathBuf::from(&zdotdir).join(".zshrc");
+    return Ok(path);
+  }
+
+  let home = dirs::home_dir().context("Could not determine home directory")?;
+  Ok(home.join(".zshrc"))
+}
+
+/// Inserts (or replaces) a managed block in the zsh config file that adds
+/// `fpath_dir` to `fpath` and initialises the completion system.
+pub fn upsert_zsh_config(config_path: &Path, fpath_dir: &Path) -> Result<()> {
+  let existing = match fs::read_to_string(config_path) {
+    Ok(content) => content,
+    Err(err) if err.kind() == ErrorKind::NotFound => String::new(),
+    Err(err) => {
+      return Err(err).with_context(|| format!("Could not read {}", config_path.display()));
+    }
+  };
+
+  let snippet = zsh_fpath_snippet(fpath_dir);
+  let updated = upsert_managed_block(
+    &existing,
+    &snippet,
+    "# oxide completions start",
+    "# oxide completions end",
+  );
+
+  if updated != existing {
+    let dir = config_path
+      .parent()
+      .context("Zsh config path has no parent directory")?;
+    fs::create_dir_all(dir)
+      .with_context(|| format!("Could not create directory {}", dir.display()))?;
+    fs::write(config_path, updated)
+      .with_context(|| format!("Could not write {}", config_path.display()))?;
+  }
+
+  Ok(())
+}
+
+pub fn zsh_fpath_snippet(fpath_dir: &Path) -> String {
+  let dir = fpath_dir.to_string_lossy();
+  format!(
+    "# oxide completions start\n\
+fpath=({dir} $fpath)\n\
+autoload -Uz compinit && compinit\n\
+# oxide completions end"
+  )
+}
+
 fn zdotdir_completions_dir() -> Option<PathBuf> {
-  // Only check an explicit $ZDOTDIR — do not fall back to ~/.config/zsh,
-  // because that directory may exist on non-HyDE systems without any
-  // auto-sourcing of its contents.
   let zdotdir = std::env::var("ZDOTDIR").map(PathBuf::from).ok()?;
   let dir = zdotdir.join("completions");
   if !dir.is_dir() {
     return None;
   }
-  // Confirm this is a HyDE environment before using the sourced-script path.
+
   let is_hyde = zdotdir.join(".hyde.zshrc").exists() || which::which("hyde-cli").is_ok();
   if is_hyde { Some(dir) } else { None }
 }
@@ -110,25 +428,20 @@ fn home_zfunc_dir() -> Result<PathBuf> {
   Ok(home.join(".zfunc"))
 }
 
-fn install_fish() -> Result<()> {
-  // ~/.config/fish/completions/ is the standard location for fish completions.
+// ── Fish ─────────────────────────────────────────────────────────────────────
+
+fn install_fish(script: &str) -> Result<()> {
   let dir = fish_completions_dir()?;
   fs::create_dir_all(&dir)
-    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+    .with_context(|| format!("Could not create directory {}", dir.display()))?;
   let dest = dir.join("oxide.fish");
-  fs::write(&dest, FISH_SCRIPT).with_context(|| format!("Failed to write {}", dest.display()))?;
-
-  println!(
-    "{} Fish completions installed to {}",
-    "✔".green(),
-    dest.display()
-  );
-  println!("  Completions are active immediately in new fish sessions.");
+  write_completion_script(&dest, script)?;
+  println!("Written to {}", dest.display());
+  println!("\nRestart your shell to activate completions.");
   Ok(())
 }
 
 fn fish_completions_dir() -> Result<PathBuf> {
-  // Respect $XDG_CONFIG_HOME if set, otherwise fall back to ~/.config
   let config_dir = std::env::var("XDG_CONFIG_HOME")
     .map(PathBuf::from)
     .unwrap_or_else(|_| {
@@ -139,34 +452,19 @@ fn fish_completions_dir() -> Result<PathBuf> {
   Ok(config_dir.join("fish/completions"))
 }
 
-fn install_powershell() -> Result<()> {
+// ── PowerShell ────────────────────────────────────────────────────────────────
+
+fn install_powershell(script: &str) -> Result<()> {
   let script_path = powershell_script_path()?;
-  write_completion_script(&script_path, POWERSHELL_SCRIPT)?;
+  write_completion_script(&script_path, script)?;
 
   let profiles = powershell_profile_paths()?;
   for profile in &profiles {
     upsert_powershell_profile(profile, &script_path)?;
   }
 
-  println!(
-    "{} PowerShell completions installed to {}",
-    "✔".green(),
-    script_path.display()
-  );
-  for profile in &profiles {
-    println!("  Registered in {}", profile.display());
-  }
-  println!("  Open a new PowerShell session to use completions.");
-  Ok(())
-}
-
-fn write_completion_script(path: &Path, script: &str) -> Result<()> {
-  let dir = path
-    .parent()
-    .context("Completion script path is missing a parent directory")?;
-  fs::create_dir_all(dir)
-    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
-  fs::write(path, script).with_context(|| format!("Failed to write {}", path.display()))?;
+  println!("Written to {}", script_path.display());
+  println!("\nProfile updated. Restart PowerShell to activate completions.");
   Ok(())
 }
 
@@ -178,11 +476,11 @@ fn powershell_script_path() -> Result<PathBuf> {
 fn powershell_profile_paths() -> Result<Vec<PathBuf>> {
   let documents_dir = dirs::document_dir()
     .or_else(|| dirs::home_dir().map(|home| home.join("Documents")))
-    .context("Could not determine documents directory")?;
+    .context("Could not determine Documents directory")?;
   Ok(powershell_profile_paths_in(&documents_dir))
 }
 
-fn powershell_profile_paths_in(documents_dir: &Path) -> Vec<PathBuf> {
+pub fn powershell_profile_paths_in(documents_dir: &Path) -> Vec<PathBuf> {
   vec![
     documents_dir
       .join("PowerShell")
@@ -196,28 +494,28 @@ fn powershell_profile_paths_in(documents_dir: &Path) -> Vec<PathBuf> {
 fn upsert_powershell_profile(profile_path: &Path, script_path: &Path) -> Result<()> {
   let dir = profile_path
     .parent()
-    .context("Profile path is missing a parent directory")?;
+    .context("PowerShell profile path has no parent directory")?;
   fs::create_dir_all(dir)
-    .with_context(|| format!("Failed to create directory {}", dir.display()))?;
+    .with_context(|| format!("Could not create directory {}", dir.display()))?;
 
   let existing = match fs::read_to_string(profile_path) {
     Ok(content) => content,
     Err(err) if err.kind() == ErrorKind::NotFound => String::new(),
     Err(err) => {
-      return Err(err).with_context(|| format!("Failed to read {}", profile_path.display()));
+      return Err(err).with_context(|| format!("Could not read {}", profile_path.display()));
     }
   };
 
   let updated = upsert_managed_block(
     &existing,
     &powershell_profile_snippet(script_path),
-    POWERSHELL_PROFILE_START_MARKER,
-    POWERSHELL_PROFILE_END_MARKER,
+    "# oxide completions start",
+    "# oxide completions end",
   );
 
   if updated != existing {
     fs::write(profile_path, updated)
-      .with_context(|| format!("Failed to write {}", profile_path.display()))?;
+      .with_context(|| format!("Could not write {}", profile_path.display()))?;
   }
 
   Ok(())
@@ -226,45 +524,20 @@ fn upsert_powershell_profile(profile_path: &Path, script_path: &Path) -> Result<
 fn powershell_profile_snippet(script_path: &Path) -> String {
   let script_path = powershell_single_quote(script_path);
   format!(
-    "{POWERSHELL_PROFILE_START_MARKER}\n\
+    "# oxide completions start\n\
 $oxideCompletionScript = '{script_path}'\n\
 if (Test-Path $oxideCompletionScript) {{\n\
   . $oxideCompletionScript\n\
 }}\n\
-{POWERSHELL_PROFILE_END_MARKER}"
+# oxide completions end"
   )
-}
-
-#[doc(hidden)]
-pub fn powershell_profile_paths_in_for_tests(documents_dir: &Path) -> Vec<PathBuf> {
-  powershell_profile_paths_in(documents_dir)
-}
-
-#[doc(hidden)]
-pub fn powershell_profile_snippet_for_tests(script_path: &Path) -> String {
-  powershell_profile_snippet(script_path)
-}
-
-#[doc(hidden)]
-pub fn upsert_managed_block_for_tests(
-  content: &str,
-  block: &str,
-  start_marker: &str,
-  end_marker: &str,
-) -> String {
-  upsert_managed_block(content, block, start_marker, end_marker)
-}
-
-#[doc(hidden)]
-pub fn powershell_script_for_tests() -> &'static str {
-  POWERSHELL_SCRIPT
 }
 
 fn powershell_single_quote(path: &Path) -> String {
   path.to_string_lossy().replace('\'', "''")
 }
 
-fn upsert_managed_block(
+pub fn upsert_managed_block(
   content: &str,
   block: &str,
   start_marker: &str,
@@ -295,378 +568,12 @@ fn upsert_managed_block(
   content
 }
 
-/// Print dynamic completions to stdout — called by the generated completion scripts.
-///
-/// - No `addon_id`: prints installed addon IDs, one per line.
-/// - With `addon_id`: prints that addon's command names, one per line.
-///
-/// Errors are silently ignored so a broken cache never crashes the shell.
-pub fn print_dynamic_completions(addons_dir: &Path, addon_id: Option<&str>) {
-  match addon_id {
-    None => print_addon_ids(addons_dir),
-    Some(id) => print_addon_commands(addons_dir, id),
-  }
+fn write_completion_script(path: &Path, script: &str) -> Result<()> {
+  let dir = path
+    .parent()
+    .context("Completion file path has no parent directory")?;
+  fs::create_dir_all(dir)
+    .with_context(|| format!("Could not create directory {}", dir.display()))?;
+  fs::write(path, script).with_context(|| format!("Could not write {}", path.display()))?;
+  Ok(())
 }
-
-fn print_addon_ids(addons_dir: &Path) {
-  let index = addons_dir.join("oxide-addons.json");
-  let Ok(content) = std::fs::read_to_string(&index) else {
-    return;
-  };
-  let Ok(cache) = serde_json::from_str::<AddonsCache>(&content) else {
-    return;
-  };
-  for addon in &cache.addons {
-    println!("{}", addon.id);
-  }
-}
-
-fn print_addon_commands(addons_dir: &Path, addon_id: &str) {
-  let manifest_path = addons_dir.join(addon_id).join("oxide.addon.json");
-  let Ok(content) = std::fs::read_to_string(&manifest_path) else {
-    return;
-  };
-  let Ok(manifest) = serde_json::from_str::<AddonManifest>(&content) else {
-    return;
-  };
-  let mut seen: HashSet<String> = HashSet::new();
-  for variant in &manifest.variants {
-    for cmd in &variant.commands {
-      if seen.insert(cmd.name.clone()) {
-        println!("{}", cmd.name);
-      }
-    }
-  }
-}
-
-// ── Shell scripts ─────────────────────────────────────────────────────────────
-
-const BASH_SCRIPT: &str = r#"# oxide shell completions for bash
-# Source this file or append it to ~/.bashrc:
-#   oxide completions bash >> ~/.bashrc
-
-_oxide_completions() {
-  local cur prev
-  cur="${COMP_WORDS[COMP_CWORD]}"
-  prev="${COMP_WORDS[COMP_CWORD-1]}"
-
-  local static_top="new template addon login logout account completions"
-  local template_subs="install list remove publish update"
-  local addon_subs="install list remove publish update"
-
-  case $COMP_CWORD in
-    1)
-      local addon_ids
-      addon_ids=$(oxide _complete 2>/dev/null)
-      COMPREPLY=($(compgen -W "$static_top $addon_ids" -- "$cur"))
-      ;;
-    2)
-      case $prev in
-        template|t) COMPREPLY=($(compgen -W "$template_subs" -- "$cur")) ;;
-        addon|a)     COMPREPLY=($(compgen -W "$addon_subs" -- "$cur")) ;;
-        *)
-          local addon_cmds
-          addon_cmds=$(oxide _complete "$prev" 2>/dev/null)
-          if [ -n "$addon_cmds" ]; then
-            COMPREPLY=($(compgen -W "$addon_cmds" -- "$cur"))
-          fi
-          ;;
-      esac
-      ;;
-  esac
-}
-
-complete -F _oxide_completions oxide
-"#;
-
-// Used when saving to $ZDOTDIR/completions/ (e.g. HyDE) — sourced directly,
-// so no #compdef header; registers via `compdef` instead.
-const ZSH_SOURCED_SCRIPT: &str = r#"# oxide shell completions for zsh
-# Auto-installed by: oxide completions zsh
-# Loaded automatically by your shell config via _load_completions().
-
-if command -v oxide &>/dev/null; then
-  _oxide() {
-    local state
-
-    _arguments \
-      '1: :->cmd' \
-      '2: :->subcmd' && return 0
-
-    case $state in
-      cmd)
-        local static_cmds=(
-          'new:Create a new project from a template (oxide n)'
-          'template:Manage templates (oxide t)'
-          'addon:Manage addons (oxide a)'
-          'login:Log in to your Oxide account (oxide in)'
-          'logout:Log out of your Oxide account (oxide out)'
-          'account:Show account information'
-          'completions:Install shell completion script'
-        )
-        local addon_ids
-        addon_ids=(${(f)"$(oxide _complete 2>/dev/null)"})
-        _describe 'command' static_cmds
-        [[ ${#addon_ids[@]} -gt 0 ]] && compadd -- "${addon_ids[@]}"
-        ;;
-      subcmd)
-        case ${words[2]} in
-          template|t)
-            local subs=(
-              'install:Download and cache a template (i)'
-              'list:List installed templates (l)'
-              'remove:Remove a template from cache (r)'
-              'publish:Publish a GitHub repository as a template (p)'
-              'update:Update a published template (u)'
-            )
-            _describe 'subcommand' subs
-            ;;
-          addon|a)
-            local subs=(
-              'install:Install and cache an addon (i)'
-              'list:List installed addons (l)'
-              'remove:Remove a cached addon (r)'
-              'publish:Publish a GitHub repository as an addon (p)'
-              'update:Update a published addon (u)'
-            )
-            _describe 'subcommand' subs
-            ;;
-          *)
-            local addon_cmds
-            addon_cmds=(${(f)"$(oxide _complete "${words[2]}" 2>/dev/null)"})
-            [[ ${#addon_cmds[@]} -gt 0 ]] && compadd -- "${addon_cmds[@]}"
-            ;;
-        esac
-        ;;
-    esac
-  }
-
-  compdef _oxide oxide
-fi
-"#;
-
-// Used when saving to ~/.zfunc/_oxide — loaded via fpath, needs #compdef header.
-const ZSH_FPATH_SCRIPT: &str = r#"#compdef oxide
-# oxide shell completions for zsh
-# Auto-installed by: oxide completions zsh
-# Requires ~/.zfunc in your fpath and compinit called in ~/.zshrc.
-
-_oxide() {
-  local state
-
-  _arguments \
-    '1: :->cmd' \
-    '2: :->subcmd' && return 0
-
-  case $state in
-    cmd)
-      local static_cmds=(
-        'new:Create a new project from a template (oxide n)'
-        'template:Manage templates (oxide t)'
-        'addon:Manage addons (oxide a)'
-        'login:Log in to your Oxide account (oxide in)'
-        'logout:Log out of your Oxide account (oxide out)'
-        'account:Show account information'
-        'completions:Install shell completion script'
-      )
-      local addon_ids
-      addon_ids=(${(f)"$(oxide _complete 2>/dev/null)"})
-      _describe 'command' static_cmds
-      [[ ${#addon_ids[@]} -gt 0 ]] && compadd -- "${addon_ids[@]}"
-      ;;
-    subcmd)
-      case ${words[2]} in
-        template|t)
-          local subs=(
-            'install:Download and cache a template (i)'
-            'list:List installed templates (l)'
-            'remove:Remove a template from cache (r)'
-            'publish:Publish a GitHub repository as a template (p)'
-            'update:Update a published template (u)'
-          )
-          _describe 'subcommand' subs
-          ;;
-        addon|a)
-          local subs=(
-            'install:Install and cache an addon (i)'
-            'list:List installed addons (l)'
-            'remove:Remove a cached addon (r)'
-            'publish:Publish a GitHub repository as an addon (p)'
-            'update:Update a published addon (u)'
-          )
-          _describe 'subcommand' subs
-          ;;
-        *)
-          local addon_cmds
-          addon_cmds=(${(f)"$(oxide _complete "${words[2]}" 2>/dev/null)"})
-          [[ ${#addon_cmds[@]} -gt 0 ]] && compadd -- "${addon_cmds[@]}"
-          ;;
-      esac
-      ;;
-  esac
-}
-
-_oxide
-"#;
-
-const FISH_SCRIPT: &str = r#"# oxide shell completions for fish
-# Save to your fish completions directory:
-#   oxide completions fish > ~/.config/fish/completions/oxide.fish
-
-# Disable file completions for oxide globally
-complete -c oxide -f
-
-# ── Top-level subcommands ──────────────────────────────────────────────────────
-complete -c oxide -n '__fish_use_subcommand' -a 'new'         -d 'Create a new project from a template (oxide n)'
-complete -c oxide -n '__fish_use_subcommand' -a 'template'    -d 'Manage templates (oxide t)'
-complete -c oxide -n '__fish_use_subcommand' -a 'addon'       -d 'Manage addons (oxide a)'
-complete -c oxide -n '__fish_use_subcommand' -a 'login'       -d 'Log in to your Oxide account (oxide in)'
-complete -c oxide -n '__fish_use_subcommand' -a 'logout'      -d 'Log out of your Oxide account (oxide out)'
-complete -c oxide -n '__fish_use_subcommand' -a 'account'     -d 'Show account information'
-complete -c oxide -n '__fish_use_subcommand' -a 'completions' -d 'Install shell completion script'
-
-# Dynamic addon IDs from cache (automatically updated as addons are installed)
-complete -c oxide -n '__fish_use_subcommand' -a '(oxide _complete 2>/dev/null)'
-
-# ── template subcommands ───────────────────────────────────────────────────────
-complete -c oxide -n '__fish_seen_subcommand_from template t' -a 'install' -d 'Download and cache a template (i)'
-complete -c oxide -n '__fish_seen_subcommand_from template t' -a 'list'    -d 'List installed templates (l)'
-complete -c oxide -n '__fish_seen_subcommand_from template t' -a 'remove'  -d 'Remove a template from cache (r)'
-complete -c oxide -n '__fish_seen_subcommand_from template t' -a 'publish' -d 'Publish a GitHub repository as a template (p)'
-complete -c oxide -n '__fish_seen_subcommand_from template t' -a 'update'  -d 'Update a published template (u)'
-
-# ── addon subcommands ──────────────────────────────────────────────────────────
-complete -c oxide -n '__fish_seen_subcommand_from addon a' -a 'install' -d 'Install and cache an addon (i)'
-complete -c oxide -n '__fish_seen_subcommand_from addon a' -a 'list'    -d 'List installed addons (l)'
-complete -c oxide -n '__fish_seen_subcommand_from addon a' -a 'remove'  -d 'Remove a cached addon (r)'
-complete -c oxide -n '__fish_seen_subcommand_from addon a' -a 'publish' -d 'Publish a GitHub repository as an addon (p)'
-complete -c oxide -n '__fish_seen_subcommand_from addon a' -a 'update'  -d 'Update a published addon (u)'
-
-# ── Dynamic addon commands ─────────────────────────────────────────────────────
-# When the second token is an installed addon ID, complete with its commands.
-# This fires automatically after every `oxide addon install <id>` — no extra steps needed.
-complete -c oxide \
-  -n 'test (count (commandline -opc)) -eq 2; and not contains -- (commandline -opc)[2] new template addon login logout account completions' \
-  -a '(oxide _complete (commandline -opc)[2] 2>/dev/null)'
-"#;
-
-const POWERSHELL_PROFILE_START_MARKER: &str = "# oxide completions start";
-const POWERSHELL_PROFILE_END_MARKER: &str = "# oxide completions end";
-
-const POWERSHELL_SCRIPT: &str = r#"# oxide shell completions for PowerShell
-
-function New-OxideCompletionResult {
-  param(
-    [string] $Value,
-    [string] $ToolTip
-  )
-
-  [System.Management.Automation.CompletionResult]::new($Value, $Value, 'ParameterValue', $ToolTip)
-}
-
-$registerOxideCompleter = @{
-  CommandName = 'oxide'
-  ScriptBlock = {
-    param($wordToComplete, $commandAst, $cursorPosition)
-
-    if ($null -eq $wordToComplete) {
-      $wordToComplete = ''
-    }
-
-    $commandName = if ($commandAst.CommandElements.Count -gt 0) {
-      $commandAst.CommandElements[0].Extent.Text
-    } else {
-      'oxide'
-    }
-
-    $tokens = @($commandAst.CommandElements | Select-Object -Skip 1 | ForEach-Object {
-      $_.Extent.Text
-    })
-
-    $topLevel = @(
-      @{ Value = 'new';         ToolTip = 'Create a new project from a template (oxide n)' }
-      @{ Value = 'template';    ToolTip = 'Manage templates (oxide t)' }
-      @{ Value = 'addon';       ToolTip = 'Manage addons (oxide a)' }
-      @{ Value = 'login';       ToolTip = 'Log in to your Oxide account (oxide in)' }
-      @{ Value = 'logout';      ToolTip = 'Log out of your Oxide account (oxide out)' }
-      @{ Value = 'account';     ToolTip = 'Show account information' }
-      @{ Value = 'completions'; ToolTip = 'Install shell completions' }
-      @{ Value = 'n';           ToolTip = 'Alias for new' }
-      @{ Value = 't';           ToolTip = 'Alias for template' }
-      @{ Value = 'a';           ToolTip = 'Alias for addon' }
-      @{ Value = 'in';          ToolTip = 'Alias for login' }
-      @{ Value = 'out';         ToolTip = 'Alias for logout' }
-    )
-
-    $templateSubcommands = @(
-      @{ Value = 'install'; ToolTip = 'Download and cache a template (i)' }
-      @{ Value = 'list';    ToolTip = 'List installed templates (l)' }
-      @{ Value = 'remove';  ToolTip = 'Remove a template from cache (r)' }
-      @{ Value = 'publish'; ToolTip = 'Publish a GitHub repository as a template (p)' }
-      @{ Value = 'update';  ToolTip = 'Update a published template (u)' }
-    )
-
-    $addonSubcommands = @(
-      @{ Value = 'install'; ToolTip = 'Install and cache an addon (i)' }
-      @{ Value = 'list';    ToolTip = 'List installed addons (l)' }
-      @{ Value = 'remove';  ToolTip = 'Remove a cached addon (r)' }
-      @{ Value = 'publish'; ToolTip = 'Publish a GitHub repository as an addon (p)' }
-      @{ Value = 'update';  ToolTip = 'Update a published addon (u)' }
-    )
-
-    $completionShells = @(
-      @{ Value = 'bash';       ToolTip = 'Install bash completions' }
-      @{ Value = 'zsh';        ToolTip = 'Install zsh completions' }
-      @{ Value = 'fish';       ToolTip = 'Install fish completions' }
-      @{ Value = 'powershell'; ToolTip = 'Install PowerShell completions' }
-    )
-
-    function Complete-OxideItems {
-      param([object[]] $Items)
-
-      foreach ($item in $Items) {
-        if ($item.Value -like "$wordToComplete*") {
-          New-OxideCompletionResult -Value $item.Value -ToolTip $item.ToolTip
-        }
-      }
-    }
-
-    if ($tokens.Count -le 1) {
-      Complete-OxideItems $topLevel
-      $addonIds = & $commandName _complete 2>$null
-      foreach ($addonId in $addonIds) {
-        if ($addonId -like "$wordToComplete*") {
-          New-OxideCompletionResult -Value $addonId -ToolTip 'Installed addon'
-        }
-      }
-      return
-    }
-
-    $first = $tokens[0]
-    if ($tokens.Count -eq 2) {
-      switch ($first) {
-        'template' { Complete-OxideItems $templateSubcommands; return }
-        't' { Complete-OxideItems $templateSubcommands; return }
-        'addon' { Complete-OxideItems $addonSubcommands; return }
-        'a' { Complete-OxideItems $addonSubcommands; return }
-        'completions' { Complete-OxideItems $completionShells; return }
-        default {
-          $addonCommands = & $commandName _complete $first 2>$null
-          foreach ($addonCommand in $addonCommands) {
-            if ($addonCommand -like "$wordToComplete*") {
-              New-OxideCompletionResult -Value $addonCommand -ToolTip 'Addon command'
-            }
-          }
-          return
-        }
-      }
-    }
-  }
-}
-
-if ((Get-Command Register-ArgumentCompleter).Parameters.ContainsKey('Native')) {
-  $registerOxideCompleter.Native = $true
-}
-
-Register-ArgumentCompleter @registerOxideCompleter
-"#;

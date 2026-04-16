@@ -30,6 +30,7 @@ fn template_help() {
     .args(["template", "--help"])
     .assert()
     .success()
+    .stdout(contains("(oxide t)"))
     .stdout(contains("install"))
     .stdout(contains("list"))
     .stdout(contains("remove"))
@@ -80,6 +81,7 @@ fn addon_help() {
     .args(["addon", "--help"])
     .assert()
     .success()
+    .stdout(contains("(oxide a)"))
     .stdout(contains("install"))
     .stdout(contains("list"))
     .stdout(contains("remove"));
@@ -120,6 +122,7 @@ fn new_help() {
     .args(["new", "--help"])
     .assert()
     .success()
+    .stdout(contains("(oxide n)"))
     .stdout(contains("template"));
 }
 
@@ -141,12 +144,20 @@ fn new_missing_template_arg() {
 
 #[test]
 fn login_help() {
-  cmd().args(["login", "--help"]).assert().success();
+  cmd()
+    .args(["login", "--help"])
+    .assert()
+    .success()
+    .stdout(contains("(oxide in)"));
 }
 
 #[test]
 fn logout_help() {
-  cmd().args(["logout", "--help"]).assert().success();
+  cmd()
+    .args(["logout", "--help"])
+    .assert()
+    .success()
+    .stdout(contains("(oxide out)"));
 }
 
 #[test]
@@ -161,6 +172,34 @@ fn upgrade_help() {
     .assert()
     .success()
     .stdout(contains("latest Oxide release"));
+}
+
+#[test]
+fn use_help() {
+  cmd()
+    .args(["use", "--help"])
+    .assert()
+    .success()
+    .stdout(contains("Run an installed addon command"))
+    .stdout(contains("oxide use <ADDON_ID> <COMMAND>"));
+}
+
+#[test]
+fn use_without_args_shows_help() {
+  cmd()
+    .arg("use")
+    .assert()
+    .failure()
+    .stderr(contains("oxide use <ADDON_ID> <COMMAND>"));
+}
+
+#[test]
+fn top_level_addon_execution_is_not_available_anymore() {
+  cmd()
+    .args(["drizzle", "install"])
+    .assert()
+    .failure()
+    .stderr(contains("unrecognized subcommand"));
 }
 
 // ── aliases ───────────────────────────────────────────────────────────────────
@@ -196,27 +235,6 @@ fn alias_a_for_addon() {
     .assert()
     .success()
     .stdout(contains("install"));
-}
-
-// ── completions subcommand ────────────────────────────────────────────────────
-
-#[test]
-fn completions_help() {
-  cmd()
-    .args(["completions", "--help"])
-    .assert()
-    .success()
-    .stdout(contains("SHELL"))
-    .stdout(contains("powershell"));
-}
-
-#[test]
-fn completions_missing_arg() {
-  cmd()
-    .arg("completions")
-    .assert()
-    .failure()
-    .stderr(contains("SHELL"));
 }
 
 // ── template subcommand aliases ───────────────────────────────────────────────

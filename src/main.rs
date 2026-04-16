@@ -1,14 +1,13 @@
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use clap::Parser;
 use oxide_cli::{
   AppContext, CleanupState, addons,
   auth::{account::print_user_info, login::login, logout::logout},
   cache::{get_installed_templates, remove_template_from_cache},
   cli::{
-    Cli,
-    commands::{AddonCommands, Commands, TemplateCommands},
+    self,
+    commands::{AddonCommands, Commands, TemplateCommands, UseCommands},
   },
   completions,
   paths::OxidePaths,
@@ -22,6 +21,7 @@ use oxide_cli::{
   upgrade::{check_cli_version_cached, render_upgrade_notice, upgrade_cli},
   utils::{
     cleanup::setup_ctrlc_handler,
+    errors::print_error,
     validate::{is_valid_github_repo_url, validate_project_name, validate_template_name},
   },
 };
@@ -29,8 +29,16 @@ use reqwest::Client;
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
-async fn main() -> Result<()> {
-  let cli = Cli::parse();
+async fn main() {
+  completions::complete_env();
+  if let Err(err) = run().await {
+    print_error(&err);
+    std::process::exit(1);
+  }
+}
+
+async fn run() -> Result<()> {
+  let cli = cli::parse();
   let oxide_paths = OxidePaths::new()?;
   oxide_paths.ensure_directories()?;
   let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
@@ -39,7 +47,8 @@ async fn main() -> Result<()> {
   setup_ctrlc_handler(cleanup_state.clone(), oxide_paths.templates.clone())?;
 
   let ctx = AppContext::new(oxide_paths, client, cleanup_state);
-  let skip_version_notice = matches!(&cli.command, Commands::Upgrade);
+  let skip_version_notice =
+    matches!(&cli.command, Commands::Upgrade | Commands::Completions { .. });
   let version_check_handle = if skip_version_notice {
     None
   } else {
@@ -128,20 +137,23 @@ async fn main() -> Result<()> {
         addons::update::update_addon(&ctx, &addon_url).await?;
       }
     },
+    Commands::Use { command } => match command {
+      UseCommands::External(args) => {
+        let addon_id = args
+          .first()
+          .context("Usage: oxide use <addon-id> <command>")?;
+        let command_name = args
+          .get(1)
+          .context("Usage: oxide use <addon-id> <command>")?;
+        let project_root = std::env::current_dir()?;
+        addons::runner::run_addon_command(&ctx, addon_id, command_name, &project_root).await?;
+      }
+    },
     Commands::Upgrade => {
       upgrade_cli(&ctx).await?;
     }
     Commands::Completions { shell } => {
-      completions::install_completions(&shell)?;
-    }
-    Commands::Complete { addon_id } => {
-      completions::print_dynamic_completions(&ctx.paths.addons, addon_id.as_deref());
-    }
-    Commands::External(args) => {
-      let addon_id = &args[0];
-      let command_name = args.get(1).context("Usage: oxide <addon-id> <command>")?;
-      let project_root = std::env::current_dir()?;
-      addons::runner::run_addon_command(&ctx, addon_id, command_name, &project_root).await?;
+      completions::install_completions(shell)?;
     }
   }
 

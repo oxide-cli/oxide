@@ -1,6 +1,6 @@
 [package]
 name = "oxide-cli"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2024"
 authors = ["Maksym <maksymzhuk759@gmail.com>"]
 description = "CLI for scaffolding projects from remote templates and extending them with project addons"
@@ -25,7 +25,8 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 # CLI framework
-clap = { version = "4.5", features = ["derive", "cargo", "color"] }
+clap = { version = "4.5", features = ["derive", "cargo", "color", "string"] }
+clap_complete = { version = "4.5", features = ["unstable-dynamic"] }
 
 # Interactive prompts
 inquire = "0.9.3"
@@ -71,10 +72,10 @@ thiserror = "2.0.18"
 glob = "0.3"
 regex = "1.10"
 semver = "1.0"
-which = "8.0.0"
 
 include_dir = "0.7"
 dirs = "6.0"
+which = "7"
 ctrlc = "3.5.2"
 chrono = "0.4.43"
 comfy-table = "7"

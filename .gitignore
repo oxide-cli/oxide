@@ -3,3 +3,4 @@
 .claude/
 CLAUDE.md
 .codex
+src/completions_example.rs

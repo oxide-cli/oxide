@@ -1,8 +1,8 @@
 use std::{fs, path::Path};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
-use crate::auth::server::User;
+use crate::{auth::server::User, utils::errors::OxideError};
 
 pub fn get_auth_user(auth_path: &Path) -> Result<User> {
   match fs::read_to_string(auth_path) {
@@ -10,6 +10,6 @@ pub fn get_auth_user(auth_path: &Path) -> Result<User> {
       let user: User = serde_json::from_str(&auth_json_str)?;
       Ok(user)
     }
-    Err(_) => Err(anyhow!("You are not logged in yet.")),
+    Err(_) => Err(OxideError::NotLoggedIn.into()),
   }
 }
