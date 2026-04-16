@@ -269,20 +269,6 @@ Installed addons are expected to include an `oxide.addon.json` manifest. Oxide u
 - command variants
 - file modification steps such as create, copy, inject, replace, append, delete, rename, and move
 
-## Development
-
-Run the CLI locally:
-
-```bash
-cargo run -- --help
-```
-
-Run tests:
-
-```bash
-cargo test
-```
-
 ## License
 
 Licensed under either of these:
