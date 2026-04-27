@@ -106,7 +106,10 @@ fn upsert_zsh_config_replaces_old_block() {
   upsert_zsh_config(&config, Path::new("/new/.zfunc")).unwrap();
   let content = fs::read_to_string(&config).unwrap();
   assert!(content.contains("/new/.zfunc"), "should contain new path");
-  assert!(!content.contains("/old/.zfunc"), "should not contain old path");
+  assert!(
+    !content.contains("/old/.zfunc"),
+    "should not contain old path"
+  );
 }
 
 #[test]
@@ -153,8 +156,8 @@ fn template_candidates_with_cache_returns_names() {
   let cache_json = r#"{
     "lastUpdated": "2026-01-01T00:00:00Z",
     "templates": [
-      {"name":"react-vite","version":"1.0.0","source":"","path":"react-vite","official":true,"commit_sha":"abc"},
-      {"name":"next-app","version":"2.0.0","source":"","path":"next-app","official":false,"commit_sha":"def"}
+      {"name":"react-vite","version":"1.0.0","source":"","path":"react-vite","commit_sha":"abc"},
+      {"name":"next-app","version":"2.0.0","source":"","path":"next-app","commit_sha":"def"}
     ]
   }"#;
   dir

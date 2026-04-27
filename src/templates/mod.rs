@@ -19,7 +19,6 @@ pub struct OxideTemplate {
   pub version: String,
   #[serde(rename = "oxideVersion")]
   pub oxide_version: String,
-  pub official: bool,
   pub repository: OxideTemplateRepository,
   pub metadata: OxideTemplateMetadata,
 }

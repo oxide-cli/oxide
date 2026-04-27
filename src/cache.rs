@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::Result;
 use chrono::Utc;
-use comfy_table::{Attribute, Cell, Color, Table};
+use comfy_table::{Attribute, Cell, Table};
 use serde::{Deserialize, Serialize};
 
 use crate::{AppContext, templates::OxideTemplate};
@@ -20,7 +20,6 @@ pub struct CachedTemplate {
   pub version: String,
   pub source: String,
   pub path: String,
-  pub official: bool,
   pub commit_sha: String,
 }
 
@@ -55,7 +54,6 @@ pub fn update_templates_cache(
     version: template_info.version,
     source: template_info.repository.url,
     path: path.to_string_lossy().to_string(),
-    official: template_info.official,
     commit_sha: commit_sha.to_string(),
   };
   templates_info.templates.push(cached_template.clone());
@@ -173,18 +171,12 @@ pub fn get_installed_templates(template_path: &Path) -> Result<()> {
   table.set_header(vec![
     Cell::new("Name").add_attribute(Attribute::Bold),
     Cell::new("Version").add_attribute(Attribute::Bold),
-    Cell::new("Official").add_attribute(Attribute::Bold),
   ]);
 
   for template in templates_info.templates {
     table.add_row(vec![
       Cell::new(&template.name),
       Cell::new(&template.version),
-      Cell::new(if template.official { "✓" } else { "✗" }).fg(if template.official {
-        Color::Green
-      } else {
-        Color::Red
-      }),
     ]);
   }
 

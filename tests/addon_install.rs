@@ -1,11 +1,7 @@
 mod common;
 
 use common::addon_classify_install_state_for_tests;
-use oxide_cli::addons::{
-  cache::CachedAddon,
-  install::AddonInstallResult,
-  manifest::AddonManifest,
-};
+use oxide_cli::addons::{cache::CachedAddon, install::AddonInstallResult, manifest::AddonManifest};
 
 fn cached_addon(commit_sha: &str) -> CachedAddon {
   CachedAddon {

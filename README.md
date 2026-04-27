@@ -262,7 +262,7 @@ When addon commands run inside a project, Oxide records execution state in `oxid
 
 ## Templates
 
-Published templates are expected to include an `oxide.template.json` manifest in the template root. Oxide uses that manifest to track template metadata such as template name, version, source repository, and whether the template is official.
+Published templates are expected to include an `oxide.template.json` manifest in the template root. Oxide uses that manifest to track template metadata such as template name, version, and source repository.
 
 Template files ending with `.tera` are rendered during project generation and written without the `.tera` suffix.
 

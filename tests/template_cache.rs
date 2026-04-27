@@ -36,7 +36,6 @@ fn write_oxide_template_json(dir: &assert_fs::TempDir, subdir: &str, name: &str)
     "name": name,
     "version": "1.0.0",
     "oxideVersion": "0.5.0",
-    "official": true,
     "repository": { "url": "https://github.com/example/repo" },
     "metadata": { "displayName": name, "description": "test" }
   });
