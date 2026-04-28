@@ -20,7 +20,7 @@ pub async fn login(auth_path: &Path, backend_url: &str, frontend_url: &str) -> R
   }
 
   let state = generate_state_token();
-  // NOTE: oxide-server must forward the `?state=` query param it receives
+  // NOTE: anesis-server must forward the `?state=` query param it receives
   // at /auth/cli-login through to the localhost callback redirect so that
   // the CSRF check below can validate it.
   open::that(format!("{}/auth/cli-login?state={}", backend_url, state))?;

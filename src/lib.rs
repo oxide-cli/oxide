@@ -16,12 +16,12 @@ use std::{
 
 use reqwest::Client;
 
-use crate::paths::OxidePaths;
+use crate::paths::AnesisPaths;
 
 pub type CleanupState = Arc<Mutex<Option<PathBuf>>>;
 
 pub struct AppContext {
-  pub paths: OxidePaths,
+  pub paths: AnesisPaths,
   pub client: Client,
   pub cleanup_state: CleanupState,
   pub backend_url: String,
@@ -29,11 +29,11 @@ pub struct AppContext {
 }
 
 impl AppContext {
-  pub fn new(paths: OxidePaths, client: Client, cleanup_state: CleanupState) -> Self {
-    let backend_url = std::env::var("OXIDE_BACKEND_URL")
-      .unwrap_or_else(|_| "https://oxide-server.onrender.com".to_string());
-    let frontend_url = std::env::var("OXIDE_FRONTEND_URL")
-      .unwrap_or_else(|_| "https://oxide-cli.vercel.app".to_string());
+  pub fn new(paths: AnesisPaths, client: Client, cleanup_state: CleanupState) -> Self {
+    let backend_url = std::env::var("ANESIS_BACKEND_URL")
+      .unwrap_or_else(|_| "https://anesis-server.onrender.com".to_string());
+    let frontend_url = std::env::var("ANESIS_FRONTEND_URL")
+      .unwrap_or_else(|_| "https://anesis-cli.vercel.app".to_string());
     Self {
       paths,
       client,

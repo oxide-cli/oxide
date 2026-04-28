@@ -5,7 +5,7 @@ use common::{
   asset_filename_for_tests, is_cache_fresh_for_tests, is_newer_version_for_tests,
   normalize_version_tag_for_tests, parse_version_for_tests, release_asset_url_for_tests,
 };
-use oxide_cli::upgrade::render_upgrade_notice;
+use anesis_cli::upgrade::render_upgrade_notice;
 
 #[test]
 fn normalize_version_tag_strips_leading_v() {
@@ -29,11 +29,11 @@ fn is_newer_version_compares_numeric_components() {
 fn asset_filename_appends_exe_for_windows_builds() {
   assert_eq!(
     asset_filename_for_tests("windows-x86_64"),
-    "oxide-windows-x86_64.exe"
+    "anesis-windows-x86_64.exe"
   );
   assert_eq!(
     asset_filename_for_tests("linux-x86_64"),
-    "oxide-linux-x86_64"
+    "anesis-linux-x86_64"
   );
 }
 
@@ -42,7 +42,7 @@ fn release_asset_url_uses_expected_github_pattern() {
   let asset_url = release_asset_url_for_tests("1.2.3", "linux-x86_64");
   assert_eq!(
     asset_url,
-    "https://github.com/oxide-cli/oxide/releases/download/v1.2.3/oxide-linux-x86_64"
+    "https://github.com/anesis-cli/anesis/releases/download/v1.2.3/anesis-linux-x86_64"
   );
 }
 
@@ -74,7 +74,7 @@ fn render_upgrade_notice_mentions_upgrade_command() {
   let patch: u64 = parts.next().unwrap().parse().unwrap();
   let latest = format!("{major}.{minor}.{}", patch + 1);
   let notice = render_upgrade_notice(&latest);
-  assert!(notice.contains("Run `oxide upgrade` to update."));
+  assert!(notice.contains("Run `anesis upgrade` to update."));
   assert!(notice.contains(&format!("v{} → v{}", env!("CARGO_PKG_VERSION"), latest)));
 }
 
@@ -130,7 +130,7 @@ fn is_newer_version_major_bump() {
 fn asset_filename_for_macos_has_no_extension() {
   assert_eq!(
     asset_filename_for_tests("macos-aarch64"),
-    "oxide-macos-aarch64"
+    "anesis-macos-aarch64"
   );
 }
 

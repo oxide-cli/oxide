@@ -2,17 +2,17 @@ mod common;
 
 use anyhow::anyhow;
 use common::{rerun_prompt_message_for_tests, should_fallback_to_cached_manifest_for_tests};
-use oxide_cli::utils::errors::OxideError;
+use anesis_cli::utils::errors::AnesisError;
 
 #[test]
 fn fallback_to_cached_manifest_when_user_is_not_logged_in() {
-  let error = anyhow::Error::from(OxideError::NotLoggedIn);
+  let error = anyhow::Error::from(AnesisError::NotLoggedIn);
   assert!(should_fallback_to_cached_manifest_for_tests(&error));
 }
 
 #[test]
 fn do_not_fallback_to_cached_manifest_for_unrelated_errors() {
-  let error = anyhow!("oxide.addon.json is malformed");
+  let error = anyhow!("anesis.addon.json is malformed");
   assert!(!should_fallback_to_cached_manifest_for_tests(&error));
 }
 
@@ -45,20 +45,20 @@ fn rerun_prompt_message_is_none_when_no_prior_version_recorded() {
 
 #[test]
 fn should_fallback_for_http_unauthorized() {
-  let error = anyhow::Error::from(OxideError::HttpUnauthorized);
+  let error = anyhow::Error::from(AnesisError::HttpUnauthorized);
   assert!(should_fallback_to_cached_manifest_for_tests(&error));
 }
 
 #[test]
-fn should_not_fallback_for_network_connect_oxide_error() {
-  // OxideError::NetworkConnect is NOT in the fallback list — the fallback only
+fn should_not_fallback_for_network_connect_anesis_error() {
+  // AnesisError::NetworkConnect is NOT in the fallback list — the fallback only
   // checks for raw reqwest::Error is_connect(), not the wrapped enum variant.
-  let error = anyhow::Error::from(OxideError::NetworkConnect);
+  let error = anyhow::Error::from(AnesisError::NetworkConnect);
   assert!(!should_fallback_to_cached_manifest_for_tests(&error));
 }
 
 #[test]
 fn should_not_fallback_for_http_server_error() {
-  let error = anyhow::Error::from(OxideError::HttpServerError("addon".to_string()));
+  let error = anyhow::Error::from(AnesisError::HttpServerError("addon".to_string()));
   assert!(!should_fallback_to_cached_manifest_for_tests(&error));
 }

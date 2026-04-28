@@ -1,5 +1,5 @@
 use assert_fs::prelude::*;
-use oxide_cli::{auth::token::get_auth_user, utils::errors::OxideError};
+use anesis_cli::{auth::token::get_auth_user, utils::errors::AnesisError};
 
 #[test]
 fn reads_valid_auth_file() {
@@ -22,8 +22,8 @@ fn returns_not_logged_in_when_file_missing() {
   let err = get_auth_user(&auth_path).unwrap_err();
   assert!(
     err
-      .downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn)),
+      .downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn)),
     "expected NotLoggedIn, got: {err}"
   );
 }
@@ -35,10 +35,10 @@ fn returns_error_for_invalid_json() {
   auth_file.write_str("not valid json at all").unwrap();
 
   let err = get_auth_user(auth_file.path()).unwrap_err();
-  // serde_json error, not OxideError::NotLoggedIn
+  // serde_json error, not AnesisError::NotLoggedIn
   assert!(
-    err.downcast_ref::<OxideError>().is_none(),
-    "invalid JSON should not produce OxideError"
+    err.downcast_ref::<AnesisError>().is_none(),
+    "invalid JSON should not produce AnesisError"
   );
 }
 
@@ -50,7 +50,7 @@ fn returns_error_for_missing_required_fields() {
   auth_file.write_str(r#"{"foo":"bar"}"#).unwrap();
 
   let err = get_auth_user(auth_file.path()).unwrap_err();
-  assert!(err.downcast_ref::<OxideError>().is_none());
+  assert!(err.downcast_ref::<AnesisError>().is_none());
 }
 
 #[test]

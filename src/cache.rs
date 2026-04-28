@@ -5,7 +5,7 @@ use chrono::Utc;
 use comfy_table::{Attribute, Cell, Table};
 use serde::{Deserialize, Serialize};
 
-use crate::{AppContext, templates::OxideTemplate};
+use crate::{AppContext, templates::AnesisTemplate};
 
 #[derive(Serialize, Deserialize)]
 pub struct TemplatesCache {
@@ -28,11 +28,11 @@ pub fn update_templates_cache(
   path: &Path,
   commit_sha: &str,
 ) -> Result<CachedTemplate> {
-  let oxide_json = template_path.join(path).join("oxide.template.json");
-  let content = fs::read_to_string(&oxide_json)?;
-  let template_info: OxideTemplate = serde_json::from_str(&content)?;
+  let anesis_json = template_path.join(path).join("anesis.template.json");
+  let content = fs::read_to_string(&anesis_json)?;
+  let template_info: AnesisTemplate = serde_json::from_str(&content)?;
 
-  let templates_json = template_path.join("oxide-templates.json");
+  let templates_json = template_path.join("anesis-templates.json");
   let mut templates_info: TemplatesCache = if templates_json.exists() {
     let content = fs::read_to_string(&templates_json)?;
     serde_json::from_str(&content)?
@@ -67,7 +67,7 @@ pub fn update_templates_cache(
 }
 
 pub fn get_cached_template(ctx: &AppContext, name: &str) -> Result<Option<CachedTemplate>> {
-  let templates_json = ctx.paths.templates.join("oxide-templates.json");
+  let templates_json = ctx.paths.templates.join("anesis-templates.json");
 
   if !templates_json.exists() {
     return Ok(None);
@@ -85,7 +85,7 @@ pub fn get_cached_template(ctx: &AppContext, name: &str) -> Result<Option<Cached
 }
 
 pub fn remove_template_from_cache(template_path: &Path, template_name: &str) -> Result<()> {
-  let templates_json = template_path.join("oxide-templates.json");
+  let templates_json = template_path.join("anesis-templates.json");
 
   if !templates_json.exists() {
     return Err(anyhow::anyhow!(
@@ -149,7 +149,7 @@ pub fn remove_template_from_cache(template_path: &Path, template_name: &str) -> 
 }
 
 pub fn get_installed_templates(template_path: &Path) -> Result<()> {
-  let templates_json = template_path.join("oxide-templates.json");
+  let templates_json = template_path.join("anesis-templates.json");
 
   let templates_info: TemplatesCache = if templates_json.exists() {
     let content = fs::read_to_string(&templates_json)?;
@@ -190,7 +190,7 @@ pub fn get_installed_templates(template_path: &Path) -> Result<()> {
 }
 
 pub fn is_template_installed(ctx: &AppContext, template_name: &str) -> Result<bool> {
-  let templates_json = ctx.paths.templates.join("oxide-templates.json");
+  let templates_json = ctx.paths.templates.join("anesis-templates.json");
 
   let templates_info: TemplatesCache = if templates_json.exists() {
     let content = fs::read_to_string(&templates_json)?;

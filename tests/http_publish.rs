@@ -6,17 +6,17 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use assert_fs::TempDir;
-use oxide_cli::{
+use anesis_cli::{
   AppContext,
   addons::{publish::publish_addon, update::update_addon},
-  paths::OxidePaths,
+  paths::AnesisPaths,
   templates::{publish::publish, update::update},
-  utils::errors::OxideError,
+  utils::errors::AnesisError,
 };
 use reqwest::Client;
 
 fn make_ctx_without_auth(tmp: &TempDir) -> AppContext {
-  let paths = OxidePaths {
+  let paths = AnesisPaths {
     home: tmp.path().to_path_buf(),
     config: tmp.path().join("config"),
     version_check: tmp.path().join("version_check.json"),
@@ -24,7 +24,7 @@ fn make_ctx_without_auth(tmp: &TempDir) -> AppContext {
     templates: tmp.path().join("cache/templates"),
     auth: tmp.path().join("auth.json"), // file does not exist → not logged in
     addons: tmp.path().join("cache/addons"),
-    addons_index: tmp.path().join("cache/addons/oxide-addons.json"),
+    addons_index: tmp.path().join("cache/addons/anesis-addons.json"),
   };
   let client = Client::builder()
     .timeout(Duration::from_secs(5))
@@ -44,8 +44,8 @@ async fn template_publish_fails_when_not_logged_in() {
   let err = publish(&ctx, "https://github.com/owner/repo").await.unwrap_err();
   assert!(
     err
-      .downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn)),
+      .downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn)),
     "expected NotLoggedIn, got: {err}"
   );
 }
@@ -60,8 +60,8 @@ async fn template_update_fails_when_not_logged_in() {
   let err = update(&ctx, "https://github.com/owner/repo").await.unwrap_err();
   assert!(
     err
-      .downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn)),
+      .downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn)),
     "expected NotLoggedIn, got: {err}"
   );
 }
@@ -78,8 +78,8 @@ async fn addon_publish_fails_when_not_logged_in() {
     .unwrap_err();
   assert!(
     err
-      .downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn)),
+      .downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn)),
     "expected NotLoggedIn, got: {err}"
   );
 }
@@ -96,8 +96,8 @@ async fn addon_update_fails_when_not_logged_in() {
     .unwrap_err();
   assert!(
     err
-      .downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn)),
+      .downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn)),
     "expected NotLoggedIn, got: {err}"
   );
 }
@@ -106,7 +106,7 @@ async fn addon_update_fails_when_not_logged_in() {
 
 #[test]
 fn publish_template_dto_serializes_url() {
-  use oxide_cli::templates::publish::PublishTemplateDto;
+  use anesis_cli::templates::publish::PublishTemplateDto;
   let dto = PublishTemplateDto {
     url: "https://github.com/owner/repo".to_string(),
   };
@@ -116,7 +116,7 @@ fn publish_template_dto_serializes_url() {
 
 #[test]
 fn update_template_dto_serializes_url() {
-  use oxide_cli::templates::update::UpdateTemplateDto;
+  use anesis_cli::templates::update::UpdateTemplateDto;
   let dto = UpdateTemplateDto {
     url: "https://github.com/owner/repo".to_string(),
   };

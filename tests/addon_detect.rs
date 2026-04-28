@@ -1,5 +1,5 @@
 use assert_fs::prelude::*;
-use oxide_cli::addons::{
+use anesis_cli::addons::{
   detect::detect_variant,
   manifest::{DetectBlock, DetectRule, MatchMode},
 };

@@ -1,7 +1,7 @@
 mod common;
 
 use common::template_classify_install_state_for_tests;
-use oxide_cli::{cache::CachedTemplate, templates::install::InstallResult};
+use anesis_cli::{cache::CachedTemplate, templates::install::InstallResult};
 
 fn cached_template(commit_sha: &str) -> CachedTemplate {
   CachedTemplate {

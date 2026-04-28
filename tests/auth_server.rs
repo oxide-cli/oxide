@@ -1,6 +1,6 @@
 use std::sync::{Mutex, OnceLock};
 
-use oxide_cli::auth::server::run_local_auth_server;
+use anesis_cli::auth::server::run_local_auth_server;
 
 // Each test in this file starts a real Axum server on 127.0.0.1:8080.
 // The global mutex ensures no two tests bind the same port simultaneously.

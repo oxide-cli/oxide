@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-const LOCK_FILE_NAME: &str = "oxide.lock";
+const LOCK_FILE_NAME: &str = "anesis.lock";
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct LockFile {

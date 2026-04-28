@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use oxide_cli::{
+use anesis_cli::{
   AppContext, CleanupState, addons,
   auth::{account::print_user_info, login::login, logout::logout},
   cache::{get_installed_templates, remove_template_from_cache},
@@ -10,7 +10,7 @@ use oxide_cli::{
     commands::{AddonCommands, Commands, TemplateCommands, UseCommands},
   },
   completions,
-  paths::OxidePaths,
+  paths::AnesisPaths,
   templates::{
     generator::extract_template,
     install::{InstallResult, install_template},
@@ -39,14 +39,14 @@ async fn main() {
 
 async fn run() -> Result<()> {
   let cli = cli::parse();
-  let oxide_paths = OxidePaths::new()?;
-  oxide_paths.ensure_directories()?;
+  let anesis_paths = AnesisPaths::new()?;
+  anesis_paths.ensure_directories()?;
   let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
   let cleanup_state: CleanupState = Arc::new(Mutex::new(None));
 
-  setup_ctrlc_handler(cleanup_state.clone(), oxide_paths.templates.clone())?;
+  setup_ctrlc_handler(cleanup_state.clone(), anesis_paths.templates.clone())?;
 
-  let ctx = AppContext::new(oxide_paths, client, cleanup_state);
+  let ctx = AppContext::new(anesis_paths, client, cleanup_state);
   let skip_version_notice = matches!(
     &cli.command,
     Commands::Upgrade | Commands::Completions { .. }
@@ -143,10 +143,10 @@ async fn run() -> Result<()> {
       UseCommands::External(args) => {
         let addon_id = args
           .first()
-          .context("Usage: oxide use <addon-id> <command>")?;
+          .context("Usage: anesis use <addon-id> <command>")?;
         let command_name = args
           .get(1)
-          .context("Usage: oxide use <addon-id> <command>")?;
+          .context("Usage: anesis use <addon-id> <command>")?;
         let project_root = std::env::current_dir()?;
         addons::runner::run_addon_command(&ctx, addon_id, command_name, &project_root).await?;
       }

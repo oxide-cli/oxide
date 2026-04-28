@@ -17,7 +17,7 @@ use crate::{
   addons::{cache::AddonsCache, manifest::AddonManifest},
   cache::TemplatesCache,
   cli,
-  paths::OxidePaths,
+  paths::AnesisPaths,
 };
 
 const COMPLETE_ENV_VAR: &str = "COMPLETE";
@@ -77,7 +77,7 @@ pub fn install_completions(shell: CompletionShell) -> Result<()> {
 }
 
 pub fn command() -> Command {
-  let paths = OxidePaths::new().ok();
+  let paths = AnesisPaths::new().ok();
   command_for_paths(
     paths.as_ref().map(|p| p.templates.as_path()),
     paths.as_ref().map(|p| p.addons.as_path()),
@@ -208,7 +208,7 @@ fn installed_template_names(templates_dir: Option<&Path>) -> Vec<String> {
     return Vec::new();
   };
 
-  let index = templates_dir.join("oxide-templates.json");
+  let index = templates_dir.join("anesis-templates.json");
   let Ok(content) = fs::read_to_string(&index) else {
     return Vec::new();
   };
@@ -227,7 +227,7 @@ fn installed_template_names(templates_dir: Option<&Path>) -> Vec<String> {
 }
 
 fn installed_addons(addons_dir: &Path) -> Vec<InstalledAddonCompletion> {
-  let index = addons_dir.join("oxide-addons.json");
+  let index = addons_dir.join("anesis-addons.json");
   let Ok(content) = fs::read_to_string(&index) else {
     return Vec::new();
   };
@@ -250,7 +250,7 @@ fn installed_addons(addons_dir: &Path) -> Vec<InstalledAddonCompletion> {
 }
 
 fn addon_commands(addons_dir: &Path, addon_path: &str) -> Vec<InstalledAddonCommand> {
-  let manifest_path = addons_dir.join(addon_path).join("oxide.addon.json");
+  let manifest_path = addons_dir.join(addon_path).join("anesis.addon.json");
   let Ok(content) = fs::read_to_string(&manifest_path) else {
     return Vec::new();
   };
@@ -310,12 +310,12 @@ fn install_bash(script: &str) -> Result<()> {
   let dir = bash_completions_dir()?;
   fs::create_dir_all(&dir)
     .with_context(|| format!("Could not create directory {}", dir.display()))?;
-  let dest = dir.join("oxide");
+  let dest = dir.join("anesis");
   write_completion_script(&dest, script)?;
   println!("Written to {}", dest.display());
   println!(
     "\nTo activate, add this to your ~/.bashrc (if not already present):\n\
-     \n  source ~/.local/share/bash-completion/completions/oxide\n\
+     \n  source ~/.local/share/bash-completion/completions/anesis\n\
      \nThen restart your shell or run:  source ~/.bashrc"
   );
   Ok(())
@@ -333,16 +333,16 @@ fn install_zsh(script: &str) -> Result<()> {
     // HyDE: completions directory is already in fpath — just drop the file
     fs::create_dir_all(&dir)
       .with_context(|| format!("Could not create directory {}", dir.display()))?;
-    let dest = dir.join("oxide.zsh");
+    let dest = dir.join("anesis.zsh");
     write_completion_script(&dest, script)?;
     println!("Written to {}", dest.display());
     println!("\nRestart your shell to activate completions.");
   } else {
-    // Default: write to ~/.zfunc/_oxide and patch the zsh config file
+    // Default: write to ~/.zfunc/_anesis and patch the zsh config file
     let dir = home_zfunc_dir()?;
     fs::create_dir_all(&dir)
       .with_context(|| format!("Could not create directory {}", dir.display()))?;
-    let dest = dir.join("_oxide");
+    let dest = dir.join("_anesis");
     write_completion_script(&dest, script)?;
 
     let config = zsh_config_file()?;
@@ -385,8 +385,8 @@ pub fn upsert_zsh_config(config_path: &Path, fpath_dir: &Path) -> Result<()> {
   let updated = upsert_managed_block(
     &existing,
     &snippet,
-    "# oxide completions start",
-    "# oxide completions end",
+    "# anesis completions start",
+    "# anesis completions end",
   );
 
   if updated != existing {
@@ -405,10 +405,10 @@ pub fn upsert_zsh_config(config_path: &Path, fpath_dir: &Path) -> Result<()> {
 pub fn zsh_fpath_snippet(fpath_dir: &Path) -> String {
   let dir = fpath_dir.to_string_lossy();
   format!(
-    "# oxide completions start\n\
+    "# anesis completions start\n\
 fpath=({dir} $fpath)\n\
 autoload -Uz compinit && compinit\n\
-# oxide completions end"
+# anesis completions end"
   )
 }
 
@@ -434,7 +434,7 @@ fn install_fish(script: &str) -> Result<()> {
   let dir = fish_completions_dir()?;
   fs::create_dir_all(&dir)
     .with_context(|| format!("Could not create directory {}", dir.display()))?;
-  let dest = dir.join("oxide.fish");
+  let dest = dir.join("anesis.fish");
   write_completion_script(&dest, script)?;
   println!("Written to {}", dest.display());
   println!("\nRestart your shell to activate completions.");
@@ -470,7 +470,7 @@ fn install_powershell(script: &str) -> Result<()> {
 
 fn powershell_script_path() -> Result<PathBuf> {
   let home = dirs::home_dir().context("Could not determine home directory")?;
-  Ok(home.join(".oxide").join("completions").join("oxide.ps1"))
+  Ok(home.join(".anesis").join("completions").join("anesis.ps1"))
 }
 
 fn powershell_profile_paths() -> Result<Vec<PathBuf>> {
@@ -509,8 +509,8 @@ fn upsert_powershell_profile(profile_path: &Path, script_path: &Path) -> Result<
   let updated = upsert_managed_block(
     &existing,
     &powershell_profile_snippet(script_path),
-    "# oxide completions start",
-    "# oxide completions end",
+    "# anesis completions start",
+    "# anesis completions end",
   );
 
   if updated != existing {
@@ -524,12 +524,12 @@ fn upsert_powershell_profile(profile_path: &Path, script_path: &Path) -> Result<
 fn powershell_profile_snippet(script_path: &Path) -> String {
   let script_path = powershell_single_quote(script_path);
   format!(
-    "# oxide completions start\n\
-$oxideCompletionScript = '{script_path}'\n\
-if (Test-Path $oxideCompletionScript) {{\n\
-  . $oxideCompletionScript\n\
+    "# anesis completions start\n\
+$anesisCompletionScript = '{script_path}'\n\
+if (Test-Path $anesisCompletionScript) {{\n\
+  . $anesisCompletionScript\n\
 }}\n\
-# oxide completions end"
+# anesis completions end"
   )
 }
 

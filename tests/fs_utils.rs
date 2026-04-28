@@ -1,5 +1,5 @@
 use assert_fs::prelude::*;
-use oxide_cli::utils::fs::read_dir_to_files;
+use anesis_cli::utils::fs::read_dir_to_files;
 
 // ── read_dir_to_files ─────────────────────────────────────────────────────────
 

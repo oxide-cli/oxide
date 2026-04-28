@@ -1,7 +1,7 @@
 use std::{fs, path::Path, path::PathBuf};
 
 use assert_fs::prelude::*;
-use oxide_cli::completions::{
+use anesis_cli::completions::{
   addon_candidates, command_for_paths, powershell_profile_paths_in, template_candidates,
   upsert_managed_block, upsert_zsh_config, zsh_fpath_snippet,
 };
@@ -69,8 +69,8 @@ fn zsh_fpath_snippet_contains_dir_and_compinit() {
   let snippet = zsh_fpath_snippet(Path::new("/home/user/.zfunc"));
   assert!(snippet.contains("fpath=(/home/user/.zfunc $fpath)"));
   assert!(snippet.contains("autoload -Uz compinit && compinit"));
-  assert!(snippet.starts_with("# oxide completions start"));
-  assert!(snippet.ends_with("# oxide completions end"));
+  assert!(snippet.starts_with("# anesis completions start"));
+  assert!(snippet.ends_with("# anesis completions end"));
 }
 
 // ── upsert_zsh_config ─────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ fn upsert_zsh_config_is_idempotent() {
   upsert_zsh_config(&config, Path::new("/home/user/.zfunc")).unwrap();
   let content = fs::read_to_string(&config).unwrap();
   assert_eq!(
-    content.matches("# oxide completions start").count(),
+    content.matches("# anesis completions start").count(),
     1,
     "managed block should appear exactly once"
   );
@@ -161,7 +161,7 @@ fn template_candidates_with_cache_returns_names() {
     ]
   }"#;
   dir
-    .child("oxide-templates.json")
+    .child("anesis-templates.json")
     .write_str(cache_json)
     .unwrap();
 
@@ -178,7 +178,7 @@ fn template_candidates_with_cache_returns_names() {
 fn template_candidates_empty_when_cache_is_corrupt() {
   let dir = assert_fs::TempDir::new().unwrap();
   dir
-    .child("oxide-templates.json")
+    .child("anesis-templates.json")
     .write_str("not-json")
     .unwrap();
   let candidates = template_candidates(Some(dir.path()));
@@ -197,7 +197,7 @@ fn addon_candidates_with_cache_returns_ids() {
     ]
   }"#;
   dir
-    .child("oxide-addons.json")
+    .child("anesis-addons.json")
     .write_str(cache_json)
     .unwrap();
 
@@ -213,7 +213,7 @@ fn addon_candidates_with_cache_returns_ids() {
 fn addon_candidates_empty_when_cache_is_corrupt() {
   let dir = assert_fs::TempDir::new().unwrap();
   dir
-    .child("oxide-addons.json")
+    .child("anesis-addons.json")
     .write_str("bad json")
     .unwrap();
   let candidates = addon_candidates(Some(dir.path()));

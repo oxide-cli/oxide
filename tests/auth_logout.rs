@@ -1,5 +1,5 @@
 use assert_fs::prelude::*;
-use oxide_cli::auth::logout::logout;
+use anesis_cli::auth::logout::logout;
 
 #[test]
 fn removes_auth_file_when_logged_in() {

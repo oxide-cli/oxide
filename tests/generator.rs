@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use oxide_cli::templates::{
+use anesis_cli::templates::{
   TemplateFile,
   generator::{extract_dir_contents, to_camel_case, to_kebab_case, to_pascal_case, to_snake_case},
 };

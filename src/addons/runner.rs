@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use crate::{
   AppContext,
   templates::generator::{to_camel_case, to_kebab_case, to_pascal_case, to_snake_case},
-  utils::errors::OxideError,
+  utils::errors::AnesisError,
 };
 
 use super::{
@@ -58,7 +58,7 @@ pub async fn run_addon_command(
   for dep_id in &manifest.requires {
     if !is_addon_installed(&ctx.paths.addons, dep_id)? {
       return Err(anyhow!(
-        "Addon '{}' requires '{}' to be installed first. Run: oxide addon install {}",
+        "Addon '{}' requires '{}' to be installed first. Run: anesis addon install {}",
         addon_id,
         dep_id,
         dep_id
@@ -123,7 +123,7 @@ pub async fn run_addon_command(
   for req_cmd in &command.requires_commands {
     if !lock.is_command_executed(addon_id, req_cmd) {
       return Err(anyhow!(
-        "Command '{}' requires '{}' to be run first. Run: oxide use {} {}",
+        "Command '{}' requires '{}' to be run first. Run: anesis use {} {}",
         command_name,
         req_cmd,
         addon_id,
@@ -199,8 +199,8 @@ pub async fn run_addon_command(
 
 fn should_fallback_to_cached_manifest(error: &anyhow::Error) -> bool {
   if error.chain().any(|e| {
-    e.downcast_ref::<OxideError>()
-      .is_some_and(|e| matches!(e, OxideError::NotLoggedIn | OxideError::HttpUnauthorized))
+    e.downcast_ref::<AnesisError>()
+      .is_some_and(|e| matches!(e, AnesisError::NotLoggedIn | AnesisError::HttpUnauthorized))
   }) {
     return true;
   }

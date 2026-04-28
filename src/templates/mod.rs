@@ -14,22 +14,22 @@ pub struct TemplateFile {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct OxideTemplate {
+pub struct AnesisTemplate {
   pub name: String,
   pub version: String,
-  #[serde(rename = "oxideVersion")]
-  pub oxide_version: String,
-  pub repository: OxideTemplateRepository,
-  pub metadata: OxideTemplateMetadata,
+  #[serde(rename = "anesisVersion")]
+  pub anesis_version: String,
+  pub repository: AnesisTemplateRepository,
+  pub metadata: AnesisTemplateMetadata,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct OxideTemplateRepository {
+pub struct AnesisTemplateRepository {
   pub url: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct OxideTemplateMetadata {
+pub struct AnesisTemplateMetadata {
   #[serde(rename = "displayName")]
   pub display_name: String,
   pub description: String,

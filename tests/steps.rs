@@ -1,5 +1,5 @@
 use assert_fs::prelude::*;
-use oxide_cli::addons::{
+use anesis_cli::addons::{
   manifest::{
     AppendStep, CopyStep, CreateStep, DeleteStep, IfExists, IfNotFound, InjectStep, MoveStep,
     RenameStep, ReplaceStep, Target,
@@ -726,11 +726,11 @@ fn append_uses_template_var_in_content() {
   };
 
   let mut ctx = tera::Context::new();
-  ctx.insert("author", "oxide");
+  ctx.insert("author", "anesis");
   execute_append(&step, dir.path(), &ctx).unwrap();
 
   let content = std::fs::read_to_string(dir.path().join("file.txt")).unwrap();
-  assert!(content.contains("# added by oxide"));
+  assert!(content.contains("# added by anesis"));
 }
 
 #[test]

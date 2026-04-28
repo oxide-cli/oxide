@@ -1,12 +1,12 @@
 [package]
-name = "oxide-cli"
+name = "anesis-cli"
 version = "0.9.1"
 edition = "2024"
 authors = ["Maksym <maksymzhuk759@gmail.com>"]
 description = "CLI for scaffolding projects from remote templates and extending them with project addons"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/oxide-cli/oxide"
-documentation = "https://docs.rs/oxide"
+repository = "https://github.com/anesis-cli/anesis"
+documentation = "https://docs.rs/anesis"
 readme = "README.md"
 keywords = ["cli", "scaffold", "template", "addon"]
 categories = ["command-line-utilities", "development-tools"]
@@ -101,7 +101,7 @@ opt-level = 0
 debug = true
 
 [[bin]]
-name = "oxide"
+name = "anesis"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

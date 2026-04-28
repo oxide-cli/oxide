@@ -4,7 +4,7 @@ pub mod commands;
 use commands::Commands;
 
 #[derive(Parser)]
-#[command(name = "oxide", version)]
+#[command(name = "anesis", version)]
 pub struct Cli {
   #[command(subcommand)]
   pub command: Commands,

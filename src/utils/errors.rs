@@ -2,7 +2,7 @@ use colored::Colorize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum OxideError {
+pub enum AnesisError {
   #[error("You are not logged in.")]
   NotLoggedIn,
   #[error("Authentication failed. Your session may have expired.")]
@@ -18,23 +18,23 @@ pub enum OxideError {
 }
 
 /// Converts a `reqwest::Error` into an `anyhow::Error`, mapping well-known
-/// error kinds to typed `OxideError` variants so `print_error` can add hints.
+/// error kinds to typed `AnesisError` variants so `print_error` can add hints.
 pub fn classify_reqwest_error(err: reqwest::Error, resource: &str) -> anyhow::Error {
   if err.is_connect() {
-    return OxideError::NetworkConnect.into();
+    return AnesisError::NetworkConnect.into();
   }
   if err.is_timeout() {
-    return OxideError::NetworkTimeout.into();
+    return AnesisError::NetworkTimeout.into();
   }
   if let Some(status) = err.status() {
     if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
-      return OxideError::HttpUnauthorized.into();
+      return AnesisError::HttpUnauthorized.into();
     }
     if status == reqwest::StatusCode::NOT_FOUND {
-      return OxideError::HttpNotFound(resource.to_string()).into();
+      return AnesisError::HttpNotFound(resource.to_string()).into();
     }
     if status.is_server_error() {
-      return OxideError::HttpServerError(resource.to_string()).into();
+      return AnesisError::HttpServerError(resource.to_string()).into();
     }
   }
   anyhow::anyhow!("Network error while fetching {resource}")
@@ -42,18 +42,18 @@ pub fn classify_reqwest_error(err: reqwest::Error, resource: &str) -> anyhow::Er
 
 /// Prints an error to stderr in a user-friendly format.
 ///
-/// Set `OXIDE_DEBUG=1` to see the full error chain for debugging.
+/// Set `ANESIS_DEBUG=1` to see the full error chain for debugging.
 pub fn print_error(err: &anyhow::Error) {
-  if std::env::var("OXIDE_DEBUG").is_ok() {
+  if std::env::var("ANESIS_DEBUG").is_ok() {
     eprintln!("{} {:?}", "error:".red().bold(), err);
     return;
   }
 
-  // Check for OxideError anywhere in the chain — use outermost message + hint.
+  // Check for AnesisError anywhere in the chain — use outermost message + hint.
   for cause in err.chain() {
-    if let Some(oxide_err) = cause.downcast_ref::<OxideError>() {
+    if let Some(anesis_err) = cause.downcast_ref::<AnesisError>() {
       eprintln!("{} {}", "error:".red().bold(), err);
-      if let Some(hint) = hint_for_oxide_error(oxide_err) {
+      if let Some(hint) = hint_for_anesis_error(anesis_err) {
         eprintln!("  {} {}", "hint:".cyan().bold(), hint);
       }
       return;
@@ -85,17 +85,17 @@ pub fn print_error(err: &anyhow::Error) {
   eprintln!("{} {}", "error:".red().bold(), err);
 }
 
-fn hint_for_oxide_error(err: &OxideError) -> Option<&'static str> {
+fn hint_for_anesis_error(err: &AnesisError) -> Option<&'static str> {
   match err {
-    OxideError::NotLoggedIn => Some("Run `oxide login` to authenticate."),
-    OxideError::HttpUnauthorized => Some("Run `oxide login` to re-authenticate."),
-    OxideError::HttpNotFound(_) => {
+    AnesisError::NotLoggedIn => Some("Run `anesis login` to authenticate."),
+    AnesisError::HttpUnauthorized => Some("Run `anesis login` to re-authenticate."),
+    AnesisError::HttpNotFound(_) => {
       Some("Check the name is correct and that you have access.")
     }
-    OxideError::HttpServerError(_) => {
+    AnesisError::HttpServerError(_) => {
       Some("This is likely a temporary issue. Try again in a moment.")
     }
-    OxideError::NetworkConnect | OxideError::NetworkTimeout => {
+    AnesisError::NetworkConnect | AnesisError::NetworkTimeout => {
       Some("Check your internet connection and try again.")
     }
   }
@@ -129,7 +129,7 @@ fn hint_for_reqwest_error(err: &reqwest::Error) -> Option<&'static str> {
   if err.status().is_some_and(|s| {
     s == reqwest::StatusCode::UNAUTHORIZED || s == reqwest::StatusCode::FORBIDDEN
   }) {
-    return Some("Run `oxide login` to re-authenticate.");
+    return Some("Run `anesis login` to re-authenticate.");
   }
   None
 }

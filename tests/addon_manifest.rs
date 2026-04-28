@@ -1,4 +1,4 @@
-use oxide_cli::addons::manifest::*;
+use anesis_cli::addons::manifest::*;
 
 // ── Minimal manifest ──────────────────────────────────────────────────────────
 
@@ -383,7 +383,7 @@ id: tailwind
 name: Tailwind CSS
 version: "1.2.3"
 description: Add Tailwind CSS to your project
-author: oxide-cli
+author: anesis-cli
 requires:
   - node
 inputs:

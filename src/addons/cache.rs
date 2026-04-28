@@ -25,7 +25,7 @@ pub struct CachedAddon {
 }
 
 fn read_cache(addons_dir: &Path) -> Result<AddonsCache> {
-  let index = addons_dir.join("oxide-addons.json");
+  let index = addons_dir.join("anesis-addons.json");
   if index.exists() {
     let content = fs::read_to_string(&index)?;
     Ok(serde_json::from_str(&content)?)
@@ -38,7 +38,7 @@ fn read_cache(addons_dir: &Path) -> Result<AddonsCache> {
 }
 
 fn write_cache(addons_dir: &Path, cache: &AddonsCache) -> Result<()> {
-  let index = addons_dir.join("oxide-addons.json");
+  let index = addons_dir.join("anesis-addons.json");
   fs::write(index, serde_json::to_string_pretty(cache)?)?;
   Ok(())
 }

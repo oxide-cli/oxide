@@ -1,4 +1,4 @@
-use oxide_cli::utils::validate::{
+use anesis_cli::utils::validate::{
   is_valid_github_repo_url, validate_project_name, validate_template_name,
 };
 
@@ -67,7 +67,7 @@ fn project_name_reserved_windows() {
 #[test]
 fn github_url_valid() {
   assert!(is_valid_github_repo_url("https://github.com/owner/repo").is_ok());
-  assert!(is_valid_github_repo_url("https://github.com/oxide-cli/oxide").is_ok());
+  assert!(is_valid_github_repo_url("https://github.com/anesis-cli/anesis").is_ok());
 }
 
 #[test]

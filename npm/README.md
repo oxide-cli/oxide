@@ -1,26 +1,26 @@
-# Oxide
+# Anesis
 
-Oxide is a Rust CLI for scaffolding JavaScript and TypeScript projects from remote Oxide templates and extending them with project addons.
+Anesis is a Rust CLI for scaffolding JavaScript and TypeScript projects from remote Anesis templates and extending them with project addons.
 
 It supports:
 
 - creating a new project from a template
 - checking cached templates and addons for updates before use
-- authenticating against the Oxide service
-- publishing GitHub repositories as Oxide templates
+- authenticating against the Anesis service
+- publishing GitHub repositories as Anesis templates
 - installing cached addons and running addon commands inside a project
-- upgrading the CLI from GitHub Releases with `oxide upgrade`
-- notifying you when a newer Oxide version is available
+- upgrading the CLI from GitHub Releases with `anesis upgrade`
+- notifying you when a newer Anesis version is available
 
 ## Official website
 
-The official Oxide website is [oxide-cli.vercel.app](https://oxide-cli.vercel.app/).
+The official Anesis website is [anesis-cli.vercel.app](https://anesis-cli.vercel.app/).
 
-Use it as the main guide for learning and using Oxide:
+Use it as the main guide for learning and using Anesis:
 
-- [Docs](https://oxide-cli.vercel.app/docs) cover installation, authentication, templates, addons, publishing, and reference material.
-- [Templates](https://oxide-cli.vercel.app/templates) lists available project starters.
-- [Addons](https://oxide-cli.vercel.app/addons) lists reusable workflow addons.
+- [Docs](https://anesis-cli.vercel.app/docs) cover installation, authentication, templates, addons, publishing, and reference material.
+- [Templates](https://anesis-cli.vercel.app/templates) lists available project starters.
+- [Addons](https://anesis-cli.vercel.app/addons) lists reusable workflow addons.
 
 This README keeps a quick CLI reference for the repository and package users. The website contains the full, up-to-date usage guide.
 
@@ -31,238 +31,238 @@ This README keeps a quick CLI reference for the repository and package users. Th
 Linux and macOS:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/oxide-cli/oxide/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/anesis-cli/anesis/main/install.sh | bash
 ```
 
 Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/oxide-cli/oxide/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/anesis-cli/anesis/main/install.ps1 | iex
 ```
 
-Unix installers place the `oxide` binary in `~/.local/bin`. Cargo installs it in `~/.cargo/bin`. Make sure the relevant directory is in your `PATH`.
+Unix installers place the `anesis` binary in `~/.local/bin`. Cargo installs it in `~/.cargo/bin`. Make sure the relevant directory is in your `PATH`.
 
 ### Install with npm
 
 ```bash
-npm install -g @oxide-cli/oxide
+npm install -g @anesis-cli/anesis
 ```
 
-The npm package downloads the matching prebuilt Oxide binary during `postinstall`.
+The npm package downloads the matching prebuilt Anesis binary during `postinstall`.
 
 ### Install with cargo
 
 ```bash
-cargo install oxide-cli
+cargo install anesis-cli
 ```
 
 ### Manual install from GitHub Releases
 
 Download the latest release artifact for your platform:
 
-- [Linux x86_64](https://github.com/oxide-cli/oxide/releases/latest/download/oxide-linux-x86_64.tar.gz)
-- [Linux ARM64](https://github.com/oxide-cli/oxide/releases/latest/download/oxide-linux-aarch64.tar.gz)
-- [macOS Apple Silicon](https://github.com/oxide-cli/oxide/releases/latest/download/oxide-macos-aarch64.tar.gz)
-- [Windows x86_64](https://github.com/oxide-cli/oxide/releases/latest/download/oxide-windows-x86_64.zip)
+- [Linux x86_64](https://github.com/anesis-cli/anesis/releases/latest/download/anesis-linux-x86_64.tar.gz)
+- [Linux ARM64](https://github.com/anesis-cli/anesis/releases/latest/download/anesis-linux-aarch64.tar.gz)
+- [macOS Apple Silicon](https://github.com/anesis-cli/anesis/releases/latest/download/anesis-macos-aarch64.tar.gz)
+- [Windows x86_64](https://github.com/anesis-cli/anesis/releases/latest/download/anesis-windows-x86_64.zip)
 
 ## Getting started
 
 Most remote operations require authentication first:
 
 ```bash
-oxide login
+anesis login
 ```
 
 Create a new project from a template:
 
 ```bash
-oxide new my-app react-vite-ts
+anesis new my-app react-vite-ts
 ```
 
-Oxide checks whether the cached template is current before generating the project. If a newer template version exists, it updates the local cache first.
+Anesis checks whether the cached template is current before generating the project. If a newer template version exists, it updates the local cache first.
 
 ## Command overview
 
 Top-level commands:
 
 ```text
-oxide new <NAME> <TEMPLATE_NAME>
-oxide template <COMMAND>
-oxide login
-oxide logout
-oxide account
-oxide addon <COMMAND>
-oxide upgrade
-oxide completions <SHELL>
-oxide use <ADDON_ID> <COMMAND>
+anesis new <NAME> <TEMPLATE_NAME>
+anesis template <COMMAND>
+anesis login
+anesis logout
+anesis account
+anesis addon <COMMAND>
+anesis upgrade
+anesis completions <SHELL>
+anesis use <ADDON_ID> <COMMAND>
 ```
 
 Template management:
 
 ```text
-oxide template install <TEMPLATE_NAME>
-oxide template list
-oxide template remove <TEMPLATE_NAME>
-oxide template publish <GITHUB_REPOSITORY_URL>
-oxide template update <GITHUB_REPOSITORY_URL>
+anesis template install <TEMPLATE_NAME>
+anesis template list
+anesis template remove <TEMPLATE_NAME>
+anesis template publish <GITHUB_REPOSITORY_URL>
+anesis template update <GITHUB_REPOSITORY_URL>
 ```
 
 Addon management:
 
 ```text
-oxide addon install <ADDON_ID>
-oxide addon list
-oxide addon remove <ADDON_ID>
-oxide addon publish <GITHUB_REPOSITORY_URL>
-oxide addon update <GITHUB_REPOSITORY_URL>
+anesis addon install <ADDON_ID>
+anesis addon list
+anesis addon remove <ADDON_ID>
+anesis addon publish <GITHUB_REPOSITORY_URL>
+anesis addon update <GITHUB_REPOSITORY_URL>
 ```
 
 Addon execution:
 
 ```text
-oxide use <ADDON_ID> <COMMAND>
+anesis use <ADDON_ID> <COMMAND>
 ```
 
 Example:
 
 ```bash
-oxide addon install drizzle
+anesis addon install drizzle
 cd my-app
-oxide use drizzle init
+anesis use drizzle init
 ```
 
-Upgrade Oxide itself:
+Upgrade Anesis itself:
 
 ```bash
-oxide upgrade
+anesis upgrade
 ```
 
 Install shell completions:
 
 ```bash
-oxide completions zsh
+anesis completions zsh
 ```
 
 Supported shells are `bash`, `zsh`, `fish`, and `powershell`.
 
 Aliases:
 
-- `oxide n ...` for `oxide new ...`
-- `oxide t ...` for `oxide template ...`
-- `oxide a ...` for `oxide addon ...`
-- `oxide in` for `oxide login`
-- `oxide out` for `oxide logout`
+- `anesis n ...` for `anesis new ...`
+- `anesis t ...` for `anesis template ...`
+- `anesis a ...` for `anesis addon ...`
+- `anesis in` for `anesis login`
+- `anesis out` for `anesis logout`
 
 ## Common workflows
 
 Install or refresh a template in the local cache:
 
 ```bash
-oxide template install react-vite-ts
+anesis template install react-vite-ts
 ```
 
-When you run `oxide new`, Oxide also refreshes the template cache automatically if a newer version is available.
+When you run `anesis new`, Anesis also refreshes the template cache automatically if a newer version is available.
 
 List cached templates:
 
 ```bash
-oxide template list
+anesis template list
 ```
 
 Remove a cached template:
 
 ```bash
-oxide template remove react-vite-ts
+anesis template remove react-vite-ts
 ```
 
 Show the authenticated account:
 
 ```bash
-oxide account
+anesis account
 ```
 
 Publish a GitHub repository as a template:
 
 ```bash
-oxide template publish https://github.com/owner/repo
+anesis template publish https://github.com/owner/repo
 ```
 
 Update a published template:
 
 ```bash
-oxide template update https://github.com/owner/repo
+anesis template update https://github.com/owner/repo
 ```
 
 Install an addon:
 
 ```bash
-oxide addon install drizzle
+anesis addon install drizzle
 ```
 
 Run an installed addon command:
 
 ```bash
-oxide use drizzle init
+anesis use drizzle init
 ```
 
-When you run an addon command such as `oxide use drizzle init`, Oxide checks for a newer cached addon version first. If the add-on updated and the command is marked `once: true`, Oxide prompts you to re-run it.
+When you run an addon command such as `anesis use drizzle init`, Anesis checks for a newer cached addon version first. If the add-on updated and the command is marked `once: true`, Anesis prompts you to re-run it.
 
 List installed addons:
 
 ```bash
-oxide addon list
+anesis addon list
 ```
 
 Remove a cached addon:
 
 ```bash
-oxide addon remove drizzle
+anesis addon remove drizzle
 ```
 
 Publish a GitHub repository as an addon:
 
 ```bash
-oxide addon publish https://github.com/owner/repo
+anesis addon publish https://github.com/owner/repo
 ```
 
 Update a published addon:
 
 ```bash
-oxide addon update https://github.com/owner/repo
+anesis addon update https://github.com/owner/repo
 ```
 
 Upgrade the CLI to the latest release:
 
 ```bash
-oxide upgrade
+anesis upgrade
 ```
 
-After most commands, Oxide performs a background version check and prints a short upgrade notice when a newer CLI release is available.
+After most commands, Anesis performs a background version check and prints a short upgrade notice when a newer CLI release is available.
 
 Install shell completions:
 
 ```bash
-oxide completions zsh
+anesis completions zsh
 ```
 
 Supported shells are `bash`, `zsh`, `fish`, and `powershell`.
 
 ## Local data and generated files
 
-Oxide stores local state under `~/.oxide/`:
+Anesis stores local state under `~/.anesis/`:
 
-- cached templates in `~/.oxide/cache/templates`
-- cached addons in `~/.oxide/cache/addons`
-- template cache index in `~/.oxide/cache/templates/oxide-templates.json`
-- addon cache index in `~/.oxide/cache/addons/oxide-addons.json`
-- CLI version-check cache in `~/.oxide/version_check.json`
-- authentication data in `~/.oxide/auth.json`
+- cached templates in `~/.anesis/cache/templates`
+- cached addons in `~/.anesis/cache/addons`
+- template cache index in `~/.anesis/cache/templates/anesis-templates.json`
+- addon cache index in `~/.anesis/cache/addons/anesis-addons.json`
+- CLI version-check cache in `~/.anesis/version_check.json`
+- authentication data in `~/.anesis/auth.json`
 
-When addon commands run inside a project, Oxide records execution state in `oxide.lock` in the project root, including the add-on version used for each executed command.
+When addon commands run inside a project, Anesis records execution state in `anesis.lock` in the project root, including the add-on version used for each executed command.
 
 ## Templates
 
-Published templates are expected to include an `oxide.template.json` manifest in the template root. Oxide uses that manifest to track template metadata such as template name, version, and source repository.
+Published templates are expected to include an `anesis.template.json` manifest in the template root. Anesis uses that manifest to track template metadata such as template name, version, and source repository.
 
 Template files ending with `.tera` are rendered during project generation and written without the `.tera` suffix.
 
@@ -274,7 +274,7 @@ Available template variables:
 
 ## Addons
 
-Installed addons are expected to include an `oxide.addon.json` manifest. Oxide uses addon manifests to define:
+Installed addons are expected to include an `anesis.addon.json` manifest. Anesis uses addon manifests to define:
 
 - user inputs
 - project detection rules

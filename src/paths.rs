@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::Result;
 
-pub struct OxidePaths {
+pub struct AnesisPaths {
   pub home: PathBuf,
   pub config: PathBuf,
   pub version_check: PathBuf,
@@ -13,25 +13,25 @@ pub struct OxidePaths {
   pub addons_index: PathBuf,
 }
 
-impl OxidePaths {
+impl AnesisPaths {
   pub fn new() -> Result<Self> {
     let home_dir =
       dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
 
-    let oxide_home = home_dir.join(".oxide");
+    let anesis_home = home_dir.join(".anesis");
 
     Ok(Self {
-      home: oxide_home.clone(),
-      config: oxide_home.join("config.json"),
-      version_check: oxide_home.join("version_check.json"),
-      cache: oxide_home.join("cache"),
-      templates: oxide_home.join("cache").join("templates"),
-      auth: oxide_home.join("auth.json"),
-      addons: oxide_home.join("cache").join("addons"),
-      addons_index: oxide_home
+      home: anesis_home.clone(),
+      config: anesis_home.join("config.json"),
+      version_check: anesis_home.join("version_check.json"),
+      cache: anesis_home.join("cache"),
+      templates: anesis_home.join("cache").join("templates"),
+      auth: anesis_home.join("auth.json"),
+      addons: anesis_home.join("cache").join("addons"),
+      addons_index: anesis_home
         .join("cache")
         .join("addons")
-        .join("oxide-addons.json"),
+        .join("anesis-addons.json"),
     })
   }
 

@@ -17,7 +17,7 @@ pub async fn download_and_extract(
 ) -> Result<()> {
   let bytes = client
     .get(archive_url)
-    .header("User-Agent", "oxide")
+    .header("User-Agent", "anesis")
     .send()
     .await?
     .error_for_status()?

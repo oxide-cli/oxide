@@ -1,32 +1,32 @@
-use oxide_cli::paths::OxidePaths;
+use anesis_cli::paths::AnesisPaths;
 
-// ── OxidePaths::new ───────────────────────────────────────────────────────────
+// ── AnesisPaths::new ───────────────────────────────────────────────────────────
 
 #[test]
 fn new_returns_ok() {
-  assert!(OxidePaths::new().is_ok());
+  assert!(AnesisPaths::new().is_ok());
 }
 
 #[test]
-fn home_contains_oxide_suffix() {
-  let paths = OxidePaths::new().unwrap();
+fn home_contains_anesis_suffix() {
+  let paths = AnesisPaths::new().unwrap();
   assert!(
-    paths.home.to_string_lossy().ends_with(".oxide"),
-    "home should end with .oxide, got: {}",
+    paths.home.to_string_lossy().ends_with(".anesis"),
+    "home should end with .anesis, got: {}",
     paths.home.display()
   );
 }
 
 #[test]
 fn auth_json_is_under_home() {
-  let paths = OxidePaths::new().unwrap();
+  let paths = AnesisPaths::new().unwrap();
   assert!(paths.auth.starts_with(&paths.home));
   assert_eq!(paths.auth.file_name().unwrap(), "auth.json");
 }
 
 #[test]
 fn version_check_is_under_home() {
-  let paths = OxidePaths::new().unwrap();
+  let paths = AnesisPaths::new().unwrap();
   assert!(paths.version_check.starts_with(&paths.home));
   assert_eq!(
     paths.version_check.file_name().unwrap(),
@@ -36,29 +36,29 @@ fn version_check_is_under_home() {
 
 #[test]
 fn templates_is_under_cache() {
-  let paths = OxidePaths::new().unwrap();
+  let paths = AnesisPaths::new().unwrap();
   assert!(paths.templates.starts_with(&paths.cache));
 }
 
 #[test]
 fn addons_is_under_cache() {
-  let paths = OxidePaths::new().unwrap();
+  let paths = AnesisPaths::new().unwrap();
   assert!(paths.addons.starts_with(&paths.cache));
 }
 
 #[test]
 fn addons_index_is_under_addons() {
-  let paths = OxidePaths::new().unwrap();
+  let paths = AnesisPaths::new().unwrap();
   assert!(paths.addons_index.starts_with(&paths.addons));
-  assert_eq!(paths.addons_index.file_name().unwrap(), "oxide-addons.json");
+  assert_eq!(paths.addons_index.file_name().unwrap(), "anesis-addons.json");
 }
 
-// ── OxidePaths::ensure_directories ───────────────────────────────────────────
+// ── AnesisPaths::ensure_directories ───────────────────────────────────────────
 
 #[test]
 fn ensure_directories_creates_cache_dir() {
   let dir = assert_fs::TempDir::new().unwrap();
-  let paths = OxidePaths {
+  let paths = AnesisPaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
     version_check: dir.path().join("version_check.json"),
@@ -70,7 +70,7 @@ fn ensure_directories_creates_cache_dir() {
       .path()
       .join("cache")
       .join("addons")
-      .join("oxide-addons.json"),
+      .join("anesis-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -81,7 +81,7 @@ fn ensure_directories_creates_cache_dir() {
 #[test]
 fn ensure_directories_creates_templates_dir() {
   let dir = assert_fs::TempDir::new().unwrap();
-  let paths = OxidePaths {
+  let paths = AnesisPaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
     version_check: dir.path().join("version_check.json"),
@@ -93,7 +93,7 @@ fn ensure_directories_creates_templates_dir() {
       .path()
       .join("cache")
       .join("addons")
-      .join("oxide-addons.json"),
+      .join("anesis-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -104,7 +104,7 @@ fn ensure_directories_creates_templates_dir() {
 #[test]
 fn ensure_directories_creates_addons_dir() {
   let dir = assert_fs::TempDir::new().unwrap();
-  let paths = OxidePaths {
+  let paths = AnesisPaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
     version_check: dir.path().join("version_check.json"),
@@ -116,7 +116,7 @@ fn ensure_directories_creates_addons_dir() {
       .path()
       .join("cache")
       .join("addons")
-      .join("oxide-addons.json"),
+      .join("anesis-addons.json"),
   };
 
   paths.ensure_directories().unwrap();
@@ -127,7 +127,7 @@ fn ensure_directories_creates_addons_dir() {
 #[test]
 fn ensure_directories_is_idempotent() {
   let dir = assert_fs::TempDir::new().unwrap();
-  let paths = OxidePaths {
+  let paths = AnesisPaths {
     home: dir.path().to_path_buf(),
     config: dir.path().join("config.json"),
     version_check: dir.path().join("version_check.json"),
@@ -139,7 +139,7 @@ fn ensure_directories_is_idempotent() {
       .path()
       .join("cache")
       .join("addons")
-      .join("oxide-addons.json"),
+      .join("anesis-addons.json"),
   };
 
   // Running twice should not fail

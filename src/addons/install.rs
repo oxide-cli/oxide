@@ -164,17 +164,17 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonInst
 
   download_result?;
 
-  let manifest_path = addon_dir.join("oxide.addon.json");
+  let manifest_path = addon_dir.join("anesis.addon.json");
   let content = std::fs::read_to_string(&manifest_path).with_context(|| {
     format!(
-      "Addon '{addon_id}' was extracted but 'oxide.addon.json' was not found at {}. \
-       Make sure the addon archive contains a top-level '{addon_id}/' directory with 'oxide.addon.json' inside.",
+      "Addon '{addon_id}' was extracted but 'anesis.addon.json' was not found at {}. \
+       Make sure the addon archive contains a top-level '{addon_id}/' directory with 'anesis.addon.json' inside.",
       manifest_path.display()
     )
   })?;
 
   let manifest: AddonManifest = serde_json::from_str(&content)
-    .with_context(|| format!("Failed to parse oxide.addon.json for addon '{addon_id}'"))?;
+    .with_context(|| format!("Failed to parse anesis.addon.json for addon '{addon_id}'"))?;
 
   update_addons_cache(addons_dir, addon_id, &manifest, &info.commit_sha)
     .with_context(|| format!("Failed to update addons cache after installing '{addon_id}'"))?;
@@ -187,7 +187,7 @@ pub async fn install_addon(ctx: &AppContext, addon_id: &str) -> Result<AddonInst
 }
 
 pub fn read_cached_manifest(addons_dir: &Path, addon_id: &str) -> Result<AddonManifest> {
-  let manifest_path = addons_dir.join(addon_id).join("oxide.addon.json");
+  let manifest_path = addons_dir.join(addon_id).join("anesis.addon.json");
   let content = std::fs::read_to_string(&manifest_path).with_context(|| {
     format!(
       "Failed to read manifest for addon '{addon_id}' at {}",

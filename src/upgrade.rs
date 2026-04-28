@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::AppContext;
 
-const RELEASES_API_URL: &str = "https://api.github.com/repos/oxide-cli/oxide/releases/latest";
-const RELEASES_DOWNLOAD_BASE_URL: &str = "https://github.com/oxide-cli/oxide/releases/download";
+const RELEASES_API_URL: &str = "https://api.github.com/repos/anesis-cli/anesis/releases/latest";
+const RELEASES_DOWNLOAD_BASE_URL: &str = "https://github.com/anesis-cli/anesis/releases/download";
 
 #[derive(Debug, Deserialize)]
 struct LatestReleaseResponse {
@@ -34,12 +34,12 @@ pub async fn check_latest_cli_version(client: &Client) -> Result<String> {
     .header(USER_AGENT, github_user_agent())
     .send()
     .await
-    .context("Failed to query the latest Oxide release")?
+    .context("Failed to query the latest Anesis release")?
     .error_for_status()
     .context("GitHub releases endpoint returned an error")?
     .json()
     .await
-    .context("Failed to parse latest Oxide release metadata")?;
+    .context("Failed to parse latest Anesis release metadata")?;
 
   normalize_version_tag(&release.tag_name)
 }
@@ -50,33 +50,33 @@ pub async fn upgrade_cli(ctx: &AppContext) -> Result<()> {
   println!("Checking for updates...");
   let latest_version = check_latest_cli_version(&ctx.client).await?;
   if !is_newer_version(current_version, &latest_version)? {
-    println!("Oxide v{current_version} is already the latest version.");
+    println!("Anesis v{current_version} is already the latest version.");
     return Ok(());
   }
 
   let platform = current_platform()?;
   let asset_url = release_asset_url(&latest_version, platform);
-  let current_exe = env::current_exe().context("Failed to locate the current Oxide executable")?;
+  let current_exe = env::current_exe().context("Failed to locate the current Anesis executable")?;
 
-  println!("Downloading Oxide v{latest_version}...");
+  println!("Downloading Anesis v{latest_version}...");
   let binary = ctx
     .client
     .get(&asset_url)
     .header(USER_AGENT, github_user_agent())
     .send()
     .await
-    .with_context(|| format!("Failed to download Oxide v{latest_version}"))?
+    .with_context(|| format!("Failed to download Anesis v{latest_version}"))?
     .error_for_status()
     .with_context(|| format!("GitHub release asset was not available at {asset_url}"))?
     .bytes()
     .await
-    .with_context(|| format!("Failed to read the downloaded Oxide v{latest_version} binary"))?;
+    .with_context(|| format!("Failed to read the downloaded Anesis v{latest_version} binary"))?;
 
   let temp_exe = write_temp_binary(&current_exe, binary.as_ref())?;
   mark_executable(&temp_exe)?;
   replace_current_executable(&current_exe, &temp_exe)?;
 
-  println!("✓ Oxide updated to v{latest_version}. Restart your shell if needed.");
+  println!("✓ Anesis updated to v{latest_version}. Restart your shell if needed.");
   Ok(())
 }
 
@@ -101,22 +101,22 @@ pub async fn check_cli_version_cached(client: &Client, path: &Path) -> Result<Op
 
 pub fn render_upgrade_notice(latest_version: &str) -> String {
   format!(
-    "\n  A new version of Oxide is available: v{} → v{}\n  Run `oxide upgrade` to update.",
+    "\n  A new version of Anesis is available: v{} → v{}\n  Run `anesis upgrade` to update.",
     env!("CARGO_PKG_VERSION"),
     latest_version
   )
 }
 
 fn github_user_agent() -> String {
-  format!("oxide-cli/{}", env!("CARGO_PKG_VERSION"))
+  format!("anesis-cli/{}", env!("CARGO_PKG_VERSION"))
 }
 
 fn releases_api_url() -> String {
-  env::var("OXIDE_RELEASES_API_URL").unwrap_or_else(|_| RELEASES_API_URL.to_string())
+  env::var("ANESIS_RELEASES_API_URL").unwrap_or_else(|_| RELEASES_API_URL.to_string())
 }
 
 fn releases_download_base_url() -> String {
-  env::var("OXIDE_RELEASES_DOWNLOAD_BASE_URL")
+  env::var("ANESIS_RELEASES_DOWNLOAD_BASE_URL")
     .unwrap_or_else(|_| RELEASES_DOWNLOAD_BASE_URL.to_string())
 }
 
@@ -238,9 +238,9 @@ fn current_platform() -> Result<&'static str> {
 
 fn asset_filename(platform: &str) -> String {
   if platform.starts_with("windows-") {
-    format!("oxide-{platform}.exe")
+    format!("anesis-{platform}.exe")
   } else {
-    format!("oxide-{platform}")
+    format!("anesis-{platform}")
   }
 }
 
@@ -315,7 +315,7 @@ fn replace_current_executable(current_exe: &Path, temp_exe: &Path) -> Result<()>
   use std::process::Command;
 
   let updater_script =
-    current_exe.with_file_name(format!("oxide-upgrade-{}.cmd", std::process::id()));
+    current_exe.with_file_name(format!("anesis-upgrade-{}.cmd", std::process::id()));
   let script = build_windows_updater_script(current_exe, temp_exe, &updater_script)?;
   fs::write(&updater_script, script)
     .with_context(|| format!("Failed to write {}", updater_script.display()))?;

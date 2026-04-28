@@ -2,7 +2,7 @@ use assert_cmd::Command;
 use predicates::str::contains;
 
 fn cmd() -> Command {
-  assert_cmd::cargo::cargo_bin_cmd!("oxide")
+  assert_cmd::cargo::cargo_bin_cmd!("anesis")
 }
 
 // ── Help / top-level ─────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ fn template_help() {
     .args(["template", "--help"])
     .assert()
     .success()
-    .stdout(contains("(oxide t)"))
+    .stdout(contains("(anesis t)"))
     .stdout(contains("install"))
     .stdout(contains("list"))
     .stdout(contains("remove"))
@@ -81,7 +81,7 @@ fn addon_help() {
     .args(["addon", "--help"])
     .assert()
     .success()
-    .stdout(contains("(oxide a)"))
+    .stdout(contains("(anesis a)"))
     .stdout(contains("install"))
     .stdout(contains("list"))
     .stdout(contains("remove"));
@@ -122,7 +122,7 @@ fn new_help() {
     .args(["new", "--help"])
     .assert()
     .success()
-    .stdout(contains("(oxide n)"))
+    .stdout(contains("(anesis n)"))
     .stdout(contains("template"));
 }
 
@@ -148,7 +148,7 @@ fn login_help() {
     .args(["login", "--help"])
     .assert()
     .success()
-    .stdout(contains("(oxide in)"));
+    .stdout(contains("(anesis in)"));
 }
 
 #[test]
@@ -157,7 +157,7 @@ fn logout_help() {
     .args(["logout", "--help"])
     .assert()
     .success()
-    .stdout(contains("(oxide out)"));
+    .stdout(contains("(anesis out)"));
 }
 
 #[test]
@@ -171,7 +171,7 @@ fn upgrade_help() {
     .args(["upgrade", "--help"])
     .assert()
     .success()
-    .stdout(contains("latest Oxide release"));
+    .stdout(contains("latest Anesis release"));
 }
 
 #[test]
@@ -181,7 +181,7 @@ fn use_help() {
     .assert()
     .success()
     .stdout(contains("Run an installed addon command"))
-    .stdout(contains("oxide use <ADDON_ID> <COMMAND>"));
+    .stdout(contains("anesis use <ADDON_ID> <COMMAND>"));
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn use_without_args_shows_help() {
     .arg("use")
     .assert()
     .failure()
-    .stderr(contains("oxide use <ADDON_ID> <COMMAND>"));
+    .stderr(contains("anesis use <ADDON_ID> <COMMAND>"));
 }
 
 #[test]
@@ -276,5 +276,5 @@ fn version_flag() {
     .arg("--version")
     .assert()
     .success()
-    .stdout(contains("oxide"));
+    .stdout(contains("anesis"));
 }
