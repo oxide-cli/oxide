@@ -8,7 +8,7 @@ fn anesis_template_deserializes_from_json() {
     "name": "react-vite",
     "version": "1.0.0",
     "anesisVersion": "0.9.0",
-    "repository": {"url": "https://github.com/anesis-cli/react-vite"},
+    "repository": {"url": "https://github.com/anesis-dev/react-vite"},
     "metadata": {"displayName": "React + Vite", "description": "React with Vite bundler"}
   }"#;
 
@@ -16,7 +16,7 @@ fn anesis_template_deserializes_from_json() {
   assert_eq!(t.name, "react-vite");
   assert_eq!(t.version, "1.0.0");
   assert_eq!(t.anesis_version, "0.9.0");
-  assert_eq!(t.repository.url, "https://github.com/anesis-cli/react-vite");
+  assert_eq!(t.repository.url, "https://github.com/anesis-dev/react-vite");
   assert_eq!(t.metadata.display_name, "React + Vite");
   assert_eq!(t.metadata.description, "React with Vite bundler");
 }
@@ -68,7 +68,7 @@ fn anesis_template_json_round_trip_preserves_all_fields() {
     version: "3.1.0".to_string(),
     anesis_version: "0.9.0".to_string(),
     repository: AnesisTemplateRepository {
-      url: "https://github.com/anesis-cli/svelte-kit".to_string(),
+      url: "https://github.com/anesis-dev/svelte-kit".to_string(),
     },
     metadata: AnesisTemplateMetadata {
       display_name: "SvelteKit".to_string(),

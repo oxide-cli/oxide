@@ -383,7 +383,7 @@ id: tailwind
 name: Tailwind CSS
 version: "1.2.3"
 description: Add Tailwind CSS to your project
-author: anesis-cli
+author: anesis-dev
 requires:
   - node
 inputs:

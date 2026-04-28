@@ -1,7 +1,6 @@
 use std::time::Duration;
 
-use anyhow::{Context, Result};
-use anesis_cli::{
+use anesis::{
   AppContext, CleanupState, addons,
   auth::{account::print_user_info, login::login, logout::logout},
   cache::{get_installed_templates, remove_template_from_cache},
@@ -25,6 +24,7 @@ use anesis_cli::{
     validate::{is_valid_github_repo_url, validate_project_name, validate_template_name},
   },
 };
+use anyhow::{Context, Result};
 use reqwest::Client;
 use std::sync::{Arc, Mutex};
 

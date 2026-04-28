@@ -14,7 +14,7 @@ const result = spawnSync(bin, process.argv.slice(2), { stdio: 'inherit' });
 
 if (result.error) {
   if (result.error.code === 'ENOENT') {
-    console.error('oxide-cli: binary not found. Try reinstalling: npm install -g @oxide-cli/oxide');
+    console.error('oxide-cli: binary not found. Try reinstalling: npm install -g @anesis-cli/anesis');
   } else {
     console.error(`oxide-cli: ${result.error.message}`);
   }
